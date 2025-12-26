@@ -26,6 +26,7 @@ class MyApp extends StatelessWidget {
       },
       child: MaterialApp(
         title: 'Chat App',
+        // ignore: use_build_context_synchronously
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
