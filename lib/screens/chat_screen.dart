@@ -56,7 +56,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             end: Alignment.bottomCenter,
             colors: [
               Color(0xFF1a1a2e),
-              Color(0xFF16213e),
+              Color.fromARGB(255, 21, 32, 59),
             ],
           ),
         ),
