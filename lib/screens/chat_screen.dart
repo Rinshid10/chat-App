@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/socket_service.dart';
+import '../services/firebase_chat_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
 
@@ -127,7 +127,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Consumer<SocketService>(
+                            Consumer<FirebaseChatService>(
                               builder: (context, socket, _) => Row(
                                 children: [
                                   Container(
@@ -163,7 +163,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         ),
                       ),
                       // User avatar
-                      Consumer<SocketService>(
+                      Consumer<FirebaseChatService>(
                         builder: (context, socket, _) => Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -195,7 +195,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
             // Messages area
             Expanded(
-              child: Consumer<SocketService>(
+              child: Consumer<FirebaseChatService>(
                 builder: (context, socket, _) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _scrollToBottom();

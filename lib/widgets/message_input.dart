@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/socket_service.dart';
+import '../services/firebase_chat_service.dart';
 
 class MessageInput extends StatefulWidget {
   const MessageInput({super.key});
@@ -42,7 +42,7 @@ class _MessageInputState extends State<MessageInput>
         _sendBtnController.reverse();
       });
 
-      context.read<SocketService>().sendMessage(_controller.text);
+      context.read<FirebaseChatService>().sendMessage(_controller.text);
       _controller.clear();
       setState(() => _canSend = false);
       _focusNode.requestFocus();

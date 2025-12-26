@@ -14,12 +14,28 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    DateTime parsedTime;
+    if (json['timestamp'] is int) {
+      parsedTime = DateTime.fromMillisecondsSinceEpoch(json['timestamp']);
+    } else {
+      parsedTime = DateTime.tryParse(json['timestamp']?.toString() ?? '') ?? DateTime.now();
+    }
+
     return Message(
       id: json['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
       username: json['username'] ?? 'Anonymous',
       text: json['text'] ?? '',
-      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      timestamp: parsedTime,
       isSystem: json['isSystem'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'username': username,
+      'text': text,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'isSystem': isSystem,
+    };
   }
 }

@@ -1,35 +1,28 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/socket_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'services/firebase_chat_service.dart';
 import 'screens/username_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  String _getServerUrl() {
-    if (kIsWeb) {
-      // For web browser
-      return 'http://localhost:3000';
-    } else {
-      // For Android emulator use 10.0.2.2
-      // For iOS simulator use localhost
-      // For physical device use your computer's IP
-      return 'http://10.0.2.2:3000';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+    return ChangeNotifierProvider<FirebaseChatService>(
       create: (_) {
-        final socketService = SocketService();
-        socketService.connect(_getServerUrl());
-        return socketService;
+        final chatService = FirebaseChatService();
+        chatService.connect();
+        return chatService;
       },
       child: MaterialApp(
         title: 'Chat App',

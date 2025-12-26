@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/socket_service.dart';
+import '../services/firebase_chat_service.dart';
 import 'chat_screen.dart';
 
 class UsernameScreen extends StatefulWidget {
@@ -65,8 +65,8 @@ class _UsernameScreenState extends State<UsernameScreen>
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      final socketService = context.read<SocketService>();
-      socketService.join(_controller.text.trim());
+      final chatService = context.read<FirebaseChatService>();
+      chatService.join(_controller.text.trim());
 
       Navigator.pushReplacement(
         context,
@@ -298,7 +298,7 @@ class _UsernameScreenState extends State<UsernameScreen>
                       ),
                       const SizedBox(height: 40),
                       // Connection status
-                      Consumer<SocketService>(
+                      Consumer<FirebaseChatService>(
                         builder: (context, socket, _) => AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.symmetric(
