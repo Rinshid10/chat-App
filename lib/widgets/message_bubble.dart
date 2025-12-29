@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/message.dart';
+import '../services/firebase_chat_service.dart';
 
 class MessageBubble extends StatefulWidget {
   final Message message;
@@ -63,6 +65,264 @@ class _MessageBubbleState extends State<MessageBubble>
       const Color(0xFFff9f43),
     ];
     return colors[name.hashCode.abs() % colors.length];
+  }
+
+  void _showEditDeleteMenu(BuildContext context) {
+    final chatService = context.read<FirebaseChatService>();
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1a1a2e),
+              const Color(0xFF16213e),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.1),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                Icons.edit_rounded,
+                color: const Color(0xFF00d9ff),
+              ),
+              title: const Text(
+                'Edit',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditDialog(context, chatService);
+              },
+            ),
+            Divider(color: Colors.white.withOpacity(0.1)),
+            ListTile(
+              leading: Icon(
+                Icons.delete_rounded,
+                color: Colors.red[300],
+              ),
+              title: Text(
+                'Delete',
+                style: TextStyle(color: Colors.red[300]),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(context, chatService);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, FirebaseChatService chatService) {
+    final controller = TextEditingController(text: widget.message.text);
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1a1a2e),
+                const Color(0xFF16213e),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Edit Message',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Type your message...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF00d9ff),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                maxLines: 4,
+                autofocus: true,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        if (controller.text.trim().isNotEmpty) {
+                          chatService.editMessage(
+                            widget.message.id,
+                            controller.text.trim(),
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, FirebaseChatService chatService) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1a1a2e),
+                const Color(0xFF16213e),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.warning_rounded,
+                color: Colors.red[300],
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Delete Message?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'This action cannot be undone',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red[300]?.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red[300]!,
+                      ),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        chatService.deleteMessage(widget.message.id);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: Colors.red[300],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -167,75 +427,99 @@ class _MessageBubbleState extends State<MessageBubble>
                 ],
                 // Message bubble
                 Flexible(
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.7,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: widget.isMe
-                          ? const LinearGradient(
-                              colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      color: widget.isMe ? null : Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(20),
-                        topRight: const Radius.circular(20),
-                        bottomLeft: Radius.circular(widget.isMe ? 20 : 6),
-                        bottomRight: Radius.circular(widget.isMe ? 6 : 20),
+                  child: GestureDetector(
+                    onLongPress: widget.isMe && !widget.message.isSystem
+                        ? () => _showEditDeleteMenu(context)
+                        : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.7,
                       ),
-                      boxShadow: widget.isMe
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF00d9ff).withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!widget.isMe)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              widget.message.username,
-                              style: TextStyle(
-                                color: _getAvatarColor(widget.message.username),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: widget.isMe
+                            ? const LinearGradient(
+                                colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        color: widget.isMe ? null : Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(20),
+                          topRight: const Radius.circular(20),
+                          bottomLeft: Radius.circular(widget.isMe ? 20 : 6),
+                          bottomRight: Radius.circular(widget.isMe ? 6 : 20),
+                        ),
+                        boxShadow: widget.isMe
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF00d9ff).withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!widget.isMe)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                widget.message.username,
+                                style: TextStyle(
+                                  color: _getAvatarColor(widget.message.username),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
+                          Text(
+                            widget.message.text,
+                            style: TextStyle(
+                              color: widget.isMe
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.9),
+                              fontSize: 15,
+                              height: 1.4,
+                            ),
                           ),
-                        Text(
-                          widget.message.text,
-                          style: TextStyle(
-                            color: widget.isMe
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.9),
-                            fontSize: 15,
-                            height: 1.4,
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                DateFormat('HH:mm').format(widget.message.timestamp),
+                                style: TextStyle(
+                                  color: widget.isMe
+                                      ? Colors.white.withOpacity(0.7)
+                                      : Colors.white.withOpacity(0.4),
+                                  fontSize: 11,
+                                ),
+                              ),
+                              if (widget.message.isEdited) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  'edited',
+                                  style: TextStyle(
+                                    color: widget.isMe
+                                        ? Colors.white.withOpacity(0.5)
+                                        : Colors.white.withOpacity(0.3),
+                                    fontSize: 10,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('HH:mm').format(widget.message.timestamp),
-                          style: TextStyle(
-                            color: widget.isMe
-                                ? Colors.white.withOpacity(0.7)
-                                : Colors.white.withOpacity(0.4),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

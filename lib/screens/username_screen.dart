@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/firebase_chat_service.dart';
-import 'chat_screen.dart';
+import 'user_list_screen.dart';
+import 'admin_screen.dart';
 
 class UsernameScreen extends StatefulWidget {
   const UsernameScreen({super.key});
@@ -65,31 +66,58 @@ class _UsernameScreenState extends State<UsernameScreen>
 
       await Future.delayed(const Duration(milliseconds: 500));
 
+      final username = _controller.text.trim();
       final chatService = context.read<FirebaseChatService>();
-      chatService.join(_controller.text.trim());
+      chatService.join(username);
 
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const ChatScreen(),
-          transitionDuration: const Duration(milliseconds: 600),
-          transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.1, 0),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOut,
-                )),
-                child: child,
-              ),
-            );
-          },
-        ),
-      );
+      // Check if admin user
+      if (username.toLowerCase() == 'adminrinshid') {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const AdminScreen(),
+            transitionDuration: const Duration(milliseconds: 600),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.1, 0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                  )),
+                  child: child,
+                ),
+              );
+            },
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const UserListScreen(),
+            transitionDuration: const Duration(milliseconds: 600),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.1, 0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                  )),
+                  child: child,
+                ),
+              );
+            },
+          ),
+        );
+      }
     }
   }
 
