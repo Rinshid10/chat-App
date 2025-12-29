@@ -69,6 +69,136 @@ class FirebaseChatService extends ChangeNotifier {
     }
   }
 
+  Future<List<String>> getContacts() async {
+    if (_username == null) return [];
+    
+    try {
+      final contactsRef = _usersRef.child(_username!).child('contacts');
+      final snapshot = await contactsRef.get();
+      if (snapshot.exists) {
+        final contacts = <String>[];
+        final data = snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          for (var entry in data.entries) {
+            contacts.add(entry.key as String);
+          }
+        }
+        return contacts;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching contacts: $e');
+      return [];
+    }
+  }
+
+  Future<List<String>> getUsersWithConversations() async {
+    if (_username == null) return [];
+    
+    try {
+      final usersWithMessages = <String>{};
+      
+      // Get all conversations
+      final conversationsSnapshot = await _conversationsRef.get();
+      if (conversationsSnapshot.exists) {
+        final conversations = conversationsSnapshot.value as Map<dynamic, dynamic>?;
+        if (conversations != null) {
+          for (var entry in conversations.entries) {
+            final conversationId = entry.key as String;
+            // Check if this conversation involves the current user
+            // Format: chat_user1_user2 (where user1 and user2 are sorted alphabetically)
+            if (conversationId.startsWith('chat_')) {
+              // Extract usernames from conversation ID
+              final withoutPrefix = conversationId.replaceFirst('chat_', '');
+              final parts = withoutPrefix.split('_');
+              
+              // Since usernames are sorted alphabetically, we have two parts
+              // One is the current user, the other is the other user
+              if (parts.length >= 2) {
+                final user1 = parts[0];
+                // Join remaining parts in case username has underscore (unlikely but possible)
+                final user2 = parts.sublist(1).join('_');
+                
+                // Add the other user (not the current user)
+                if (user1 == _username && user2 != _username) {
+                  usersWithMessages.add(user2);
+                } else if (user2 == _username && user1 != _username) {
+                  usersWithMessages.add(user1);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      debugPrint('Users with conversations: ${usersWithMessages.toList()}');
+      return usersWithMessages.toList();
+    } catch (e) {
+      debugPrint('Error fetching users with conversations: $e');
+      return [];
+    }
+  }
+
+  Future<void> addContact(String contactUsername) async {
+    if (_username == null || contactUsername == _username) return;
+    
+    try {
+      final contactsRef = _usersRef.child(_username!).child('contacts');
+      await contactsRef.child(contactUsername).set({
+        'addedAt': ServerValue.timestamp,
+      });
+      debugPrint('Contact added: $contactUsername');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error adding contact: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> removeContact(String contactUsername) async {
+    if (_username == null) return;
+    
+    try {
+      final contactsRef = _usersRef.child(_username!).child('contacts');
+      await contactsRef.child(contactUsername).remove();
+      debugPrint('Contact removed: $contactUsername');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error removing contact: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<String>> getAllAvailableUsers() async {
+    if (_username == null) return [];
+    
+    try {
+      // Get all users
+      final allUsersSnapshot = await _usersRef.get();
+      if (!allUsersSnapshot.exists) return [];
+      
+      // Get current user's contacts
+      final contacts = await getContacts();
+      final contactsSet = contacts.toSet();
+      
+      final availableUsers = <String>[];
+      final data = allUsersSnapshot.value as Map<dynamic, dynamic>?;
+      if (data != null) {
+        for (var entry in data.entries) {
+          final username = entry.key as String;
+          // Exclude current user and already added contacts
+          if (username != _username && !contactsSet.contains(username)) {
+            availableUsers.add(username);
+          }
+        }
+      }
+      return availableUsers;
+    } catch (e) {
+      debugPrint('Error fetching available users: $e');
+      return [];
+    }
+  }
+
   Future<void> loadConversation(String otherUsername) async {
     if (_username == null) return;
 
@@ -88,18 +218,21 @@ class FirebaseChatService extends ChangeNotifier {
     // Get conversation reference
     final conversationRef = _conversationsRef.child(_currentConversationId!).child('messages');
 
-    // Load existing messages
+    // Load existing messages first
+    final existingMessageIds = <String>{};
     try {
-      final snapshot = await conversationRef.orderByChild('timestamp').get();
+      final snapshot = await conversationRef.get();
       if (snapshot.exists) {
         final data = snapshot.value as Map<dynamic, dynamic>;
         final loadedMessages = <Message>[];
         for (var entry in data.entries) {
           final messageData = Map<String, dynamic>.from(entry.value as Map);
-          messageData['id'] = entry.key;
+          final messageId = entry.key as String;
+          messageData['id'] = messageId;
           messageData['conversationId'] = _currentConversationId;
           final message = Message.fromJson(messageData);
           loadedMessages.add(message);
+          existingMessageIds.add(messageId);
         }
         // Sort by timestamp
         loadedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -110,23 +243,31 @@ class FirebaseChatService extends ChangeNotifier {
       debugPrint('Error loading messages: $e');
     }
 
-    // Listen for new messages
-    _messagesSubscription = conversationRef
-        .orderByChild('timestamp')
-        .onChildAdded
-        .listen((event) {
+    // Set up listener for new messages (onChildAdded will fire for existing messages too, but we filter them)
+    _messagesSubscription = conversationRef.onChildAdded.listen((event) {
       if (event.snapshot.value != null) {
+        final messageId = event.snapshot.key;
+        // Skip if this is an existing message we already loaded
+        if (existingMessageIds.contains(messageId)) {
+          debugPrint('Skipping existing message: $messageId');
+          return;
+        }
+        
         final data = Map<String, dynamic>.from(event.snapshot.value as Map);
-        data['id'] = event.snapshot.key;
+        data['id'] = messageId;
         data['conversationId'] = _currentConversationId;
         final message = Message.fromJson(data);
         
-        // Check if message already exists (avoid duplicates)
+        debugPrint('New message received: $messageId from ${message.username}');
+        
+        // Double check for duplicates (safety)
         if (!_messages.any((m) => m.id == message.id)) {
           _messages.add(message);
           // Keep messages sorted
           _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
           notifyListeners();
+        } else {
+          debugPrint('Duplicate message detected: $messageId');
         }
       }
     });
@@ -192,7 +333,16 @@ class FirebaseChatService extends ChangeNotifier {
           .child(_currentConversationId!)
           .child('messages');
       
-      await conversationRef.push().set(message.toJson());
+      try {
+        final pushRef = conversationRef.push();
+        await pushRef.set(message.toJson());
+        debugPrint('Message sent successfully. Conversation: $_currentConversationId, Message ID: ${pushRef.key}');
+      } catch (e) {
+        debugPrint('Error sending message: $e');
+        rethrow;
+      }
+    } else {
+      debugPrint('Cannot send message: username=$_username, conversationId=$_currentConversationId, otherUser=$_currentOtherUsername');
     }
   }
 

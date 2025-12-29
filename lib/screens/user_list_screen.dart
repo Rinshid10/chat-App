@@ -5,6 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../services/firebase_chat_service.dart';
 import 'chat_screen.dart';
 import 'username_screen.dart';
+import 'add_user_screen.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -19,6 +20,7 @@ class _UserListScreenState extends State<UserListScreen>
   Map<String, bool> _userOnlineStatus = {};
   bool _isLoading = true;
   StreamSubscription? _usersSubscription;
+  StreamSubscription? _statusSubscription;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnim;
@@ -39,16 +41,50 @@ class _UserListScreenState extends State<UserListScreen>
 
   Future<void> _loadUsers() async {
     final chatService = context.read<FirebaseChatService>();
-    final users = await chatService.getUsers();
+    
+    // Get both contacts and users with conversations
+    final contacts = await chatService.getContacts();
+    final usersWithMessages = await chatService.getUsersWithConversations();
+    
+    // Combine both lists and remove duplicates
+    final allUsers = <String>{};
+    allUsers.addAll(contacts);
+    allUsers.addAll(usersWithMessages);
     
     setState(() {
-      _users = users;
+      _users = allUsers.toList();
       _isLoading = false;
+    });
+
+    // Listen for contacts changes
+    final chatServiceRef = context.read<FirebaseChatService>();
+    if (chatServiceRef.username != null) {
+      final contactsRef = FirebaseDatabase.instance.ref('users/${chatServiceRef.username}/contacts');
+      contactsRef.onValue.listen((event) async {
+        if (mounted) {
+          await _refreshUsers();
+        }
+      });
+    }
+    
+    // Listen for new conversations/messages
+    final conversationsRef = FirebaseDatabase.instance.ref('conversations');
+    _usersSubscription = conversationsRef.onChildAdded.listen((event) async {
+      if (mounted) {
+        await _refreshUsers();
+      }
+    });
+    
+    // Also listen for conversation changes (new messages)
+    conversationsRef.onChildChanged.listen((event) async {
+      if (mounted) {
+        await _refreshUsers();
+      }
     });
 
     // Listen for user status changes
     final usersRef = FirebaseDatabase.instance.ref('users');
-    _usersSubscription = usersRef.onValue.listen((event) {
+    _statusSubscription = usersRef.onValue.listen((event) {
       if (event.snapshot.exists) {
         final data = event.snapshot.value as Map<dynamic, dynamic>;
         final onlineStatus = <String, bool>{};
@@ -61,11 +97,29 @@ class _UserListScreenState extends State<UserListScreen>
           }
         }
         
-        setState(() {
-          _userOnlineStatus = onlineStatus;
-        });
+        if (mounted) {
+          setState(() {
+            _userOnlineStatus = onlineStatus;
+          });
+        }
       }
     });
+  }
+  
+  Future<void> _refreshUsers() async {
+    final chatService = context.read<FirebaseChatService>();
+    final contacts = await chatService.getContacts();
+    final usersWithMessages = await chatService.getUsersWithConversations();
+    
+    final allUsers = <String>{};
+    allUsers.addAll(contacts);
+    allUsers.addAll(usersWithMessages);
+    
+    if (mounted) {
+      setState(() {
+        _users = allUsers.toList();
+      });
+    }
   }
 
   Color _getAvatarColor(String name) {
@@ -175,18 +229,17 @@ class _UserListScreenState extends State<UserListScreen>
                         Navigator.pop(context);
                         final chatService = context.read<FirebaseChatService>();
                         try {
+                          await chatService.removeContact(username);
                           await chatService.deleteConversation(username);
-                          // Remove from local list
+                          // Refresh contacts list
                           if (mounted) {
-                            setState(() {
-                              _users.remove(username);
-                            });
+                            _loadUsers();
                           }
                         } catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error deleting conversation: $e'),
+                                content: Text('Error removing contact: $e'),
                                 backgroundColor: Colors.red[300],
                               ),
                             );
@@ -214,6 +267,7 @@ class _UserListScreenState extends State<UserListScreen>
   @override
   void dispose() {
     _usersSubscription?.cancel();
+    _statusSubscription?.cancel();
     _fadeController.dispose();
     super.dispose();
   }
@@ -384,13 +438,13 @@ class _UserListScreenState extends State<UserListScreen>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.people_outline_rounded,
+                                  Icons.person_add_outlined,
                                   size: 60,
                                   color: Colors.white.withOpacity(0.5),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No other users yet',
+                                  'No contacts yet',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.8),
                                     fontSize: 18,
@@ -399,7 +453,7 @@ class _UserListScreenState extends State<UserListScreen>
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Wait for others to join',
+                                  'Tap the + button to add users',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.4),
                                     fontSize: 14,
@@ -547,6 +601,37 @@ class _UserListScreenState extends State<UserListScreen>
               ),
             ],
           ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const AddUserScreen(),
+              transitionDuration: const Duration(milliseconds: 300),
+              transitionsBuilder: (_, animation, __, child) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 1.0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                  )),
+                  child: child,
+                );
+              },
+            ),
+          ).then((_) {
+            // Refresh contacts when returning from AddUserScreen
+            _loadUsers();
+          });
+        },
+        backgroundColor: const Color(0xFF00d9ff),
+        child: const Icon(
+          Icons.add_rounded,
+          color: Colors.white,
         ),
       ),
     );
