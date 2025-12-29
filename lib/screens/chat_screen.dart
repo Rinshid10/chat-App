@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/firebase_chat_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
+import '../models/message.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUsername;
@@ -17,6 +18,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   late AnimationController _headerController;
   late Animation<double> _headerAnim;
+  Message? _replyingToMessage;
 
   @override
   void initState() {
@@ -289,13 +291,26 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         message: message,
                         isMe: isMe,
                         index: index,
+                        allMessages: socket.messages,
+                        onReply: !isMe ? () {
+                          setState(() {
+                            _replyingToMessage = message;
+                          });
+                        } : null,
                       );
                     },
                   );
                 },
               ),
             ),
-            const MessageInput(),
+            MessageInput(
+              replyingToMessage: _replyingToMessage,
+              onCancelReply: () {
+                setState(() {
+                  _replyingToMessage = null;
+                });
+              },
+            ),
           ],
         ),
       ),

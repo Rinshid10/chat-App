@@ -314,7 +314,7 @@ class FirebaseChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {String? replyTo}) async {
     if (text.trim().isNotEmpty && 
         _username != null && 
         _currentConversationId != null &&
@@ -327,6 +327,7 @@ class FirebaseChatService extends ChangeNotifier {
         isSystem: false,
         recipient: _currentOtherUsername,
         conversationId: _currentConversationId,
+        replyTo: replyTo,
       );
       
       final conversationRef = _conversationsRef

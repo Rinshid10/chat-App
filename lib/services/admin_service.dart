@@ -158,6 +158,40 @@ class AdminService extends ChangeNotifier {
     return _users.where((u) => u.toLowerCase() != 'adminrinshid').toList();
   }
 
+  String _getConversationId(String user1, String user2) {
+    final sorted = [user1, user2]..sort();
+    return 'chat_${sorted[0]}_${sorted[1]}';
+  }
+
+  Future<void> sendReply(String username, String text, String? replyToMessageId) async {
+    try {
+      // Generate conversation ID between admin and the user
+      final conversationId = _getConversationId('adminrinshid', username);
+      
+      final message = Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        username: 'adminrinshid',
+        text: text.trim(),
+        timestamp: DateTime.now(),
+        isSystem: false,
+        recipient: username,
+        conversationId: conversationId,
+        replyTo: replyToMessageId,
+      );
+
+      final conversationRef = _conversationsRef
+          .child(conversationId)
+          .child('messages');
+      
+      final pushRef = conversationRef.push();
+      await pushRef.set(message.toJson());
+      debugPrint('Reply sent successfully. Conversation: $conversationId, Message ID: ${pushRef.key}');
+    } catch (e) {
+      debugPrint('Error sending reply: $e');
+      rethrow;
+    }
+  }
+
   @override
   void dispose() {
     _usersSubscription?.cancel();
