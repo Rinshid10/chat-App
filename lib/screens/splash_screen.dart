@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
       final prefs = await SharedPreferences.getInstance();
       final savedUsername = prefs.getString('username');
       
-      debugPrint('Checking login status. Saved username: $savedUsername');
+      debugPrint(' login status. Saved username: $savedUsername');
       
       if (savedUsername != null && savedUsername.isNotEmpty) {
         debugPrint('Auto-logging in as: $savedUsername');

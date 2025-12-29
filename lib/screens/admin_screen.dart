@@ -170,7 +170,7 @@ class _AdminScreenState extends State<AdminScreen>
                           color: Colors.white.withOpacity(0.8),
                           size: 22,
                         ),
-                        tooltip: 'Logout',
+                        tooltip: 'Logout ',
                       ),
                     ),
                   ],
@@ -192,7 +192,7 @@ class _AdminScreenState extends State<AdminScreen>
                     if (filteredUsers.isEmpty) {
                       return Center(
                         child: Text(
-                          'No users yet',
+                          'No users Found',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.5),
                           ),
