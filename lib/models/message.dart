@@ -6,6 +6,7 @@ class Message {
   final bool isSystem;
   final String? recipient;
   final String? conversationId;
+  final bool isEdited;
 
   Message({
     required this.id,
@@ -15,6 +16,7 @@ class Message {
     this.isSystem = false,
     this.recipient,
     this.conversationId,
+    this.isEdited = false,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -33,6 +35,7 @@ class Message {
       isSystem: json['isSystem'] ?? false,
       recipient: json['recipient'],
       conversationId: json['conversationId'],
+      isEdited: json['editedAt'] != null || json['isEdited'] == true,
     );
   }
 
@@ -44,6 +47,7 @@ class Message {
       'isSystem': isSystem,
       if (recipient != null) 'recipient': recipient,
       if (conversationId != null) 'conversationId': conversationId,
+      if (isEdited) 'isEdited': true,
     };
   }
 }

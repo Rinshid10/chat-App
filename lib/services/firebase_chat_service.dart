@@ -14,6 +14,8 @@ class FirebaseChatService extends ChangeNotifier {
   String? _currentConversationId;
   String? _currentOtherUsername;
   StreamSubscription? _messagesSubscription;
+  StreamSubscription? _messagesChangedSubscription;
+  StreamSubscription? _messagesRemovedSubscription;
 
   List<Message> get messages => _messages;
   bool get isConnected => _isConnected;
@@ -72,7 +74,11 @@ class FirebaseChatService extends ChangeNotifier {
     // Clear previous messages and unsubscribe
     _messages.clear();
     await _messagesSubscription?.cancel();
+    await _messagesChangedSubscription?.cancel();
+    await _messagesRemovedSubscription?.cancel();
     _messagesSubscription = null;
+    _messagesChangedSubscription = null;
+    _messagesRemovedSubscription = null;
 
     // Generate conversation ID
     _currentConversationId = _getConversationId(_username!, otherUsername);
@@ -123,6 +129,28 @@ class FirebaseChatService extends ChangeNotifier {
         }
       }
     });
+
+    // Listen for message changes (edits)
+    _messagesChangedSubscription = conversationRef.onChildChanged.listen((event) {
+      if (event.snapshot.value != null) {
+        final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+        data['id'] = event.snapshot.key;
+        data['conversationId'] = _currentConversationId;
+        final updatedMessage = Message.fromJson(data);
+        
+        final index = _messages.indexWhere((m) => m.id == updatedMessage.id);
+        if (index != -1) {
+          _messages[index] = updatedMessage;
+          notifyListeners();
+        }
+      }
+    });
+
+    // Listen for message deletions
+    _messagesRemovedSubscription = conversationRef.onChildRemoved.listen((event) {
+      _messages.removeWhere((m) => m.id == event.snapshot.key);
+      notifyListeners();
+    });
   }
 
   Future<void> join(String username) async {
@@ -157,9 +185,64 @@ class FirebaseChatService extends ChangeNotifier {
     }
   }
 
+  Future<void> editMessage(String messageId, String newText) async {
+    if (newText.trim().isNotEmpty && 
+        _currentConversationId != null &&
+        messageId.isNotEmpty) {
+      try {
+        final messageRef = _conversationsRef
+            .child(_currentConversationId!)
+            .child('messages')
+            .child(messageId);
+        
+        // Get current message data
+        final snapshot = await messageRef.get();
+        if (snapshot.exists) {
+          final data = Map<String, dynamic>.from(snapshot.value as Map);
+          // Update text and add edited timestamp
+          data['text'] = newText.trim();
+          data['editedAt'] = DateTime.now().millisecondsSinceEpoch;
+          
+          await messageRef.update(data);
+          
+          // Local message will be updated by the onChildChanged listener
+        } else {
+          debugPrint('Message not found: $messageId');
+        }
+      } catch (e) {
+        debugPrint('Error editing message: $e');
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    if (_currentConversationId != null && messageId.isNotEmpty) {
+      try {
+        final messageRef = _conversationsRef
+            .child(_currentConversationId!)
+            .child('messages')
+            .child(messageId);
+        
+        await messageRef.remove();
+        
+        // Remove from local messages
+        _messages.removeWhere((m) => m.id == messageId);
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Error deleting message: $e');
+        rethrow;
+      }
+    }
+  }
+
   Future<void> disconnect() async {
     await _messagesSubscription?.cancel();
+    await _messagesChangedSubscription?.cancel();
+    await _messagesRemovedSubscription?.cancel();
     _messagesSubscription = null;
+    _messagesChangedSubscription = null;
+    _messagesRemovedSubscription = null;
     
     if (_username != null) {
       await _usersRef.child(_username!).update({
