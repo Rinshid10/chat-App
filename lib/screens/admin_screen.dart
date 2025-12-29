@@ -129,7 +129,7 @@ class _AdminScreenState extends State<AdminScreen>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${adminService.getFilteredUsers().length} users, ${adminService.allMessages.length} conversations',
+                              '${adminService.getFilteredUsers().length} users ${adminService.allMessages.length} conversations',
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.7),
                                 fontSize: 13,
