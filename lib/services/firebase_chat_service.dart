@@ -449,6 +449,36 @@ class FirebaseChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Set user offline when app goes to background or closes
+  Future<void> setOffline() async {
+    if (_username != null) {
+      try {
+        await _usersRef.child(_username!).update({
+          'online': false,
+          'lastSeen': ServerValue.timestamp,
+        });
+        debugPrint('User set to offline: $_username');
+      } catch (e) {
+        debugPrint('Error setting user offline: $e');
+      }
+    }
+  }
+
+  // Set user online when app comes to foreground (if logged in)
+  Future<void> setOnline() async {
+    if (_username != null) {
+      try {
+        await _usersRef.child(_username!).update({
+          'online': true,
+          'lastSeen': ServerValue.timestamp,
+        });
+        debugPrint('User set to online: $_username');
+      } catch (e) {
+        debugPrint('Error setting user online: $e');
+      }
+    }
+  }
+
   Future<void> deleteConversation(String otherUsername) async {
     if (_username == null) return;
     
@@ -465,6 +495,9 @@ class FirebaseChatService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Set user offline before clearing data
+    await setOffline();
+    
     // Clear saved username
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('username');
@@ -475,6 +508,8 @@ class FirebaseChatService extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Set user offline before disconnecting
+    setOffline();
     disconnect();
     super.dispose();
   }

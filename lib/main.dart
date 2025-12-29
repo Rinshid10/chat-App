@@ -62,22 +62,64 @@ class MyApp extends StatelessWidget {
           create: (_) => AdminService(),
         ),
       ],
-      child: MaterialApp(
-        title: 'Chat App',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
-        home: const SplashScreen(),
-        builder: (context, child) {
-          // Add error boundary for release mode
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-            child: child ?? const SizedBox(),
-          );
-        },
+      child: const AppLifecycleWrapper(),
+    );
+  }
+}
+
+class AppLifecycleWrapper extends StatefulWidget {
+  const AppLifecycleWrapper({super.key});
+
+  @override
+  State<AppLifecycleWrapper> createState() => _AppLifecycleWrapperState();
+}
+
+class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    final chatService = context.read<FirebaseChatService>();
+    
+    if (state == AppLifecycleState.paused || 
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      // App went to background or is closing - set user offline
+      chatService.setOffline();
+    } else if (state == AppLifecycleState.resumed) {
+      // App came to foreground - set user online if logged in
+      chatService.setOnline();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Chat App',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
+      home: const SplashScreen(),
+      builder: (context, child) {
+        // Add error boundary for release mode
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+          child: child ?? const SizedBox(),
+        );
+      },
     );
   }
 }
