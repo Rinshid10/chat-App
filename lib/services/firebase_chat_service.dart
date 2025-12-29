@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/message.dart';
 
 class FirebaseChatService extends ChangeNotifier {
@@ -159,6 +160,16 @@ class FirebaseChatService extends ChangeNotifier {
       'online': true,
       'lastSeen': ServerValue.timestamp,
     });
+    
+    // Save username to local storage
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = await prefs.setString('username', username);
+      debugPrint('Username saved: $username, Success: $saved');
+    } catch (e) {
+      debugPrint('Error saving username: $e');
+    }
+    
     notifyListeners();
   }
 
@@ -250,12 +261,37 @@ class FirebaseChatService extends ChangeNotifier {
         'lastSeen': ServerValue.timestamp,
       });
     }
+    
     _messages.clear();
     _isConnected = false;
     _username = null;
     _currentConversationId = null;
     _currentOtherUsername = null;
     notifyListeners();
+  }
+
+  Future<void> deleteConversation(String otherUsername) async {
+    if (_username == null) return;
+    
+    try {
+      final conversationId = _getConversationId(_username!, otherUsername);
+      final conversationRef = _conversationsRef.child(conversationId);
+      
+      await conversationRef.remove();
+      debugPrint('Conversation deleted: $conversationId');
+    } catch (e) {
+      debugPrint('Error deleting conversation: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> logout() async {
+    // Clear saved username
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('username');
+    
+    // Disconnect from Firebase
+    await disconnect();
   }
 
   @override

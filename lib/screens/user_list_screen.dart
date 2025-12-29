@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../services/firebase_chat_service.dart';
 import 'chat_screen.dart';
+import 'username_screen.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -100,6 +101,112 @@ class _UserListScreenState extends State<UserListScreen>
             child: child,
           );
         },
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, String username) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1a1a2e),
+                const Color(0xFF16213e),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.warning_rounded,
+                color: Colors.red[300],
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Delete Conversation?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Delete all messages with $username?\nThis action cannot be undone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red[300]?.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red[300]!,
+                      ),
+                    ),
+                    child: TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final chatService = context.read<FirebaseChatService>();
+                        try {
+                          await chatService.deleteConversation(username);
+                          // Remove from local list
+                          if (mounted) {
+                            setState(() {
+                              _users.remove(username);
+                            });
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error deleting conversation: $e'),
+                                backgroundColor: Colors.red[300],
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: Colors.red[300],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -226,6 +333,39 @@ class _UserListScreenState extends State<UserListScreen>
                           ],
                         ),
                       ),
+                      // Logout icon button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: () async {
+                            await chatService.logout();
+                            if (mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (_, __, ___) => const UsernameScreen(),
+                                  transitionDuration: const Duration(milliseconds: 300),
+                                  transitionsBuilder: (_, animation, __, child) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    );
+                                  },
+                                ),
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white.withOpacity(0.8),
+                            size: 22,
+                          ),
+                          tooltip: 'Logout',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -278,105 +418,127 @@ class _UserListScreenState extends State<UserListScreen>
                                 final isOnline = _userOnlineStatus[username] ?? false;
                                 final avatarColor = _getAvatarColor(username);
                                 
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.white.withOpacity(0.1),
-                                        Colors.white.withOpacity(0.05),
-                                      ],
+                                return Dismissible(
+                                  key: Key(username),
+                                  direction: DismissDirection.endToStart,
+                                  background: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red[300],
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.only(right: 20),
+                                    child: const Icon(
+                                      Icons.delete_rounded,
+                                      color: Colors.white,
+                                      size: 28,
                                     ),
                                   ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
+                                  confirmDismiss: (direction) async {
+                                    _showDeleteConfirmation(context, username);
+                                    return false; // Don't dismiss automatically, let dialog handle it
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.white.withOpacity(0.1),
+                                          Colors.white.withOpacity(0.05),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.1),
+                                      ),
                                     ),
-                                    leading: Stack(
-                                      children: [
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                avatarColor,
-                                                avatarColor.withOpacity(0.7),
-                                              ],
-                                            ),
-                                            borderRadius: BorderRadius.circular(12),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: avatarColor.withOpacity(0.3),
-                                                blurRadius: 8,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              username[0].toUpperCase(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        if (isOnline)
-                                          Positioned(
-                                            right: 0,
-                                            bottom: 0,
-                                            child: Container(
-                                              width: 14,
-                                              height: 14,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF00ff88),
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: const Color(0xFF1a1a2e),
-                                                  width: 2,
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(0xFF00ff88)
-                                                        .withOpacity(0.5),
-                                                    blurRadius: 4,
-                                                  ),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      leading: Stack(
+                                        children: [
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  avatarColor,
+                                                  avatarColor.withOpacity(0.7),
                                                 ],
                                               ),
+                                              borderRadius: BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: avatarColor.withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                ),
+                                              ],
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                username[0].toUpperCase(),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                      ],
-                                    ),
-                                    title: Text(
-                                      username,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                          if (isOnline)
+                                            Positioned(
+                                              right: 0,
+                                              bottom: 0,
+                                              child: Container(
+                                                width: 14,
+                                                height: 14,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF00ff88),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: const Color(0xFF1a1a2e),
+                                                    width: 2,
+                                                  ),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: const Color(0xFF00ff88)
+                                                          .withOpacity(0.5),
+                                                      blurRadius: 4,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                    ),
-                                    subtitle: Text(
-                                      isOnline ? 'Online' : 'Offline',
-                                      style: TextStyle(
-                                        color: isOnline
-                                            ? const Color(0xFF00ff88)
-                                            : Colors.white.withOpacity(0.4),
-                                        fontSize: 13,
+                                      title: Text(
+                                        username,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
+                                      subtitle: Text(
+                                        isOnline ? 'Online' : 'Offline',
+                                        style: TextStyle(
+                                          color: isOnline
+                                              ? const Color(0xFF00ff88)
+                                              : Colors.white.withOpacity(0.4),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      trailing: Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: Colors.white.withOpacity(0.5),
+                                        size: 16,
+                                      ),
+                                      onTap: () => _openChat(username),
                                     ),
-                                    trailing: Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      color: Colors.white.withOpacity(0.5),
-                                      size: 16,
-                                    ),
-                                    onTap: () => _openChat(username),
                                   ),
                                 );
                               },
