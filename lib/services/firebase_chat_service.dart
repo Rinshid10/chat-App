@@ -28,13 +28,23 @@ class FirebaseChatService extends ChangeNotifier {
   }
 
   void _initConnectionListener() {
-    FirebaseDatabase.instance
-        .ref('.info/connected')
-        .onValue
-        .listen((event) {
-      _isConnected = event.snapshot.value as bool? ?? false;
+    try {
+      FirebaseDatabase.instance
+          .ref('.info/connected')
+          .onValue
+          .listen((event) {
+        _isConnected = event.snapshot.value as bool? ?? false;
+        notifyListeners();
+      }, onError: (error) {
+        debugPrint('Connection listener error: $error');
+        _isConnected = false;
+        notifyListeners();
+      });
+    } catch (e) {
+      debugPrint('Error initializing connection listener: $e');
+      _isConnected = false;
       notifyListeners();
-    });
+    }
   }
 
   void connect() {

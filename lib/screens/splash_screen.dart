@@ -36,24 +36,45 @@ class _SplashScreenState extends State<SplashScreen> {
       
       if (savedUsername != null && savedUsername.isNotEmpty) {
         debugPrint('Auto-logging in as: $savedUsername');
-        // User is logged in, restore session
-        final chatService = context.read<FirebaseChatService>();
-        await chatService.join(savedUsername);
-        
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const UserListScreen(),
-              transitionDuration: const Duration(milliseconds: 300),
-              transitionsBuilder: (_, animation, __, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
-              },
-            ),
-          );
+        try {
+          // User is logged in, restore session
+          final chatService = context.read<FirebaseChatService>();
+          await chatService.join(savedUsername);
+          
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => const UserListScreen(),
+                transitionDuration: const Duration(milliseconds: 300),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+              ),
+            );
+          }
+        } catch (e, stackTrace) {
+          debugPrint('Error joining Firebase: $e');
+          debugPrint('Stack trace: $stackTrace');
+          // If Firebase join fails, still go to login to let user retry
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => const UsernameScreen(),
+                transitionDuration: const Duration(milliseconds: 300),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+              ),
+            );
+          }
         }
       } else {
         // No saved username, go to login
@@ -73,8 +94,9 @@ class _SplashScreenState extends State<SplashScreen> {
           );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error checking login status: $e');
+      debugPrint('Stack trace: $stackTrace');
       // On error, go to login screen
       if (mounted) {
         Navigator.pushReplacement(
