@@ -1,19 +1,24 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/message.dart';
 
 class FirebaseChatService extends ChangeNotifier {
-  final DatabaseReference _messagesRef =
-      FirebaseDatabase.instance.ref('messages');
+  final DatabaseReference _conversationsRef =
+      FirebaseDatabase.instance.ref('conversations');
   final DatabaseReference _usersRef = FirebaseDatabase.instance.ref('users');
 
   final List<Message> _messages = [];
   bool _isConnected = false;
   String? _username;
+  String? _currentConversationId;
+  String? _currentOtherUsername;
+  StreamSubscription? _messagesSubscription;
 
   List<Message> get messages => _messages;
   bool get isConnected => _isConnected;
   String? get username => _username;
+  String? get currentOtherUsername => _currentOtherUsername;
 
   FirebaseChatService() {
     _initConnectionListener();
@@ -30,13 +35,92 @@ class FirebaseChatService extends ChangeNotifier {
   }
 
   void connect() {
-    _messagesRef.orderByChild('timestamp').onChildAdded.listen((event) {
+    // Connection is handled per conversation now
+  }
+
+  String _getConversationId(String user1, String user2) {
+    final sorted = [user1, user2]..sort();
+    return 'chat_${sorted[0]}_${sorted[1]}';
+  }
+
+  Future<List<String>> getUsers() async {
+    try {
+      final snapshot = await _usersRef.get();
+      if (snapshot.exists) {
+        final users = <String>[];
+        final data = snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          for (var entry in data.entries) {
+            final username = entry.key as String;
+            if (username != _username) {
+              users.add(username);
+            }
+          }
+        }
+        return users;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching users: $e');
+      return [];
+    }
+  }
+
+  Future<void> loadConversation(String otherUsername) async {
+    if (_username == null) return;
+
+    // Clear previous messages and unsubscribe
+    _messages.clear();
+    await _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+
+    // Generate conversation ID
+    _currentConversationId = _getConversationId(_username!, otherUsername);
+    _currentOtherUsername = otherUsername;
+
+    // Get conversation reference
+    final conversationRef = _conversationsRef.child(_currentConversationId!).child('messages');
+
+    // Load existing messages
+    try {
+      final snapshot = await conversationRef.orderByChild('timestamp').get();
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        final loadedMessages = <Message>[];
+        for (var entry in data.entries) {
+          final messageData = Map<String, dynamic>.from(entry.value as Map);
+          messageData['id'] = entry.key;
+          messageData['conversationId'] = _currentConversationId;
+          final message = Message.fromJson(messageData);
+          loadedMessages.add(message);
+        }
+        // Sort by timestamp
+        loadedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        _messages.addAll(loadedMessages);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading messages: $e');
+    }
+
+    // Listen for new messages
+    _messagesSubscription = conversationRef
+        .orderByChild('timestamp')
+        .onChildAdded
+        .listen((event) {
       if (event.snapshot.value != null) {
         final data = Map<String, dynamic>.from(event.snapshot.value as Map);
         data['id'] = event.snapshot.key;
+        data['conversationId'] = _currentConversationId;
         final message = Message.fromJson(data);
-        _messages.add(message);
-        notifyListeners();
+        
+        // Check if message already exists (avoid duplicates)
+        if (!_messages.any((m) => m.id == message.id)) {
+          _messages.add(message);
+          // Keep messages sorted
+          _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          notifyListeners();
+        }
       }
     });
   }
@@ -47,32 +131,36 @@ class FirebaseChatService extends ChangeNotifier {
       'online': true,
       'lastSeen': ServerValue.timestamp,
     });
-
-    final systemMessage = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      username: 'System',
-      text: '$username joined the chat',
-      timestamp: DateTime.now(),
-      isSystem: true,
-    );
-    await _messagesRef.push().set(systemMessage.toJson());
     notifyListeners();
   }
 
   Future<void> sendMessage(String text) async {
-    if (text.trim().isNotEmpty && _username != null) {
+    if (text.trim().isNotEmpty && 
+        _username != null && 
+        _currentConversationId != null &&
+        _currentOtherUsername != null) {
       final message = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         username: _username!,
         text: text.trim(),
         timestamp: DateTime.now(),
         isSystem: false,
+        recipient: _currentOtherUsername,
+        conversationId: _currentConversationId,
       );
-      await _messagesRef.push().set(message.toJson());
+      
+      final conversationRef = _conversationsRef
+          .child(_currentConversationId!)
+          .child('messages');
+      
+      await conversationRef.push().set(message.toJson());
     }
   }
 
   Future<void> disconnect() async {
+    await _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    
     if (_username != null) {
       await _usersRef.child(_username!).update({
         'online': false,
@@ -82,6 +170,8 @@ class FirebaseChatService extends ChangeNotifier {
     _messages.clear();
     _isConnected = false;
     _username = null;
+    _currentConversationId = null;
+    _currentOtherUsername = null;
     notifyListeners();
   }
 

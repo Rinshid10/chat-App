@@ -5,7 +5,9 @@ import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String otherUsername;
+  
+  const ChatScreen({super.key, required this.otherUsername});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -27,6 +29,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       CurvedAnimation(parent: _headerController, curve: Curves.easeOut),
     );
     _headerController.forward();
+    
+    // Load conversation when screen is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chatService = context.read<FirebaseChatService>();
+      chatService.loadConversation(widget.otherUsername);
+    });
   }
 
   void _scrollToBottom() {
@@ -69,7 +77,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 position: Tween<Offset>(
                   begin: const Offset(0, -0.5),
                   end: Offset.zero,
-                ).animate(_headerAnim as Animation<double>),
+                ).animate(_headerAnim),
                 child: Container(
                   padding: EdgeInsets.only(
                     top: MediaQuery.of(context).padding.top + 16,
@@ -117,9 +125,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               shaderCallback: (bounds) => const LinearGradient(
                                 colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
                               ).createShader(bounds),
-                              child: const Text(
-                                'Chat Room',
-                                style: TextStyle(
+                              child: Text(
+                                widget.otherUsername,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -162,31 +170,47 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
-                      // User avatar
-                      Consumer<FirebaseChatService>(
-                        builder: (context, socket, _) => Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00d9ff).withOpacity(0.3),
-                                blurRadius: 12,
+                      // Other user avatar
+                      Builder(
+                        builder: (context) {
+                          final firstLetter = widget.otherUsername[0].toUpperCase();
+                          final colors = [
+                            const Color(0xFF00d9ff),
+                            const Color(0xFF00ff88),
+                            const Color(0xFFff6b6b),
+                            const Color(0xFFffd93d),
+                            const Color(0xFFc56cf0),
+                            const Color(0xFFff9f43),
+                          ];
+                          final avatarColor = colors[widget.otherUsername.hashCode.abs() % colors.length];
+                          
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  avatarColor,
+                                  avatarColor.withOpacity(0.7),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: Text(
-                            (socket.username ?? 'U')[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: avatarColor.withOpacity(0.3),
+                                  blurRadius: 12,
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
+                            child: Text(
+                              firstLetter,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/firebase_chat_service.dart';
-import 'chat_screen.dart';
+import 'user_list_screen.dart';
 
 class UsernameScreen extends StatefulWidget {
   const UsernameScreen({super.key});
@@ -71,7 +71,7 @@ class _UsernameScreenState extends State<UsernameScreen>
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const ChatScreen(),
+          pageBuilder: (_, __, ___) => const UserListScreen(),
           transitionDuration: const Duration(milliseconds: 600),
           transitionsBuilder: (_, animation, __, child) {
             return FadeTransition(
