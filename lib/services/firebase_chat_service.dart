@@ -28,13 +28,23 @@ class FirebaseChatService extends ChangeNotifier {
   }
 
   void _initConnectionListener() {
-    FirebaseDatabase.instance
-        .ref('.info/connected')
-        .onValue
-        .listen((event) {
-      _isConnected = event.snapshot.value as bool? ?? false;
+    try {
+      FirebaseDatabase.instance
+          .ref('.info/connected')
+          .onValue
+          .listen((event) {
+        _isConnected = event.snapshot.value as bool? ?? false;
+        notifyListeners();
+      }, onError: (error) {
+        debugPrint('Connection listener error: $error');
+        _isConnected = false;
+        notifyListeners();
+      });
+    } catch (e) {
+      debugPrint('Error initializing connection listener: $e');
+      _isConnected = false;
       notifyListeners();
-    });
+    }
   }
 
   void connect() {
@@ -297,10 +307,28 @@ class FirebaseChatService extends ChangeNotifier {
 
   Future<void> join(String username) async {
     _username = username;
-    await _usersRef.child(username).set({
-      'online': true,
-      'lastSeen': ServerValue.timestamp,
-    });
+    final userRef = _usersRef.child(username);
+    
+    // Get existing user data
+    final userSnapshot = await userRef.get();
+    Map<dynamic, dynamic> userData = {};
+    
+    if (userSnapshot.exists) {
+      userData = Map<dynamic, dynamic>.from(userSnapshot.value as Map);
+    }
+    
+    // Add login time to history
+    final loginTimes = userData['loginTimes'] as Map<dynamic, dynamic>? ?? {};
+    final loginTimeKey = DateTime.now().millisecondsSinceEpoch.toString();
+    loginTimes[loginTimeKey] = ServerValue.timestamp;
+    
+    // Update user data
+    userData['online'] = true;
+    userData['lastSeen'] = ServerValue.timestamp;
+    userData['loginTimes'] = loginTimes;
+    userData['forceLogout'] = false; // Clear force logout flag when user logs in
+    
+    await userRef.set(userData);
     
     // Save username to local storage
     try {
@@ -314,7 +342,7 @@ class FirebaseChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {String? replyTo}) async {
     if (text.trim().isNotEmpty && 
         _username != null && 
         _currentConversationId != null &&
@@ -327,6 +355,7 @@ class FirebaseChatService extends ChangeNotifier {
         isSystem: false,
         recipient: _currentOtherUsername,
         conversationId: _currentConversationId,
+        replyTo: replyTo,
       );
       
       final conversationRef = _conversationsRef
@@ -420,6 +449,36 @@ class FirebaseChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Set user offline when app goes to background or closes
+  Future<void> setOffline() async {
+    if (_username != null) {
+      try {
+        await _usersRef.child(_username!).update({
+          'online': false,
+          'lastSeen': ServerValue.timestamp,
+        });
+        debugPrint('User set to offline: $_username');
+      } catch (e) {
+        debugPrint('Error setting user offline: $e');
+      }
+    }
+  }
+
+  // Set user online when app comes to foreground (if logged in)
+  Future<void> setOnline() async {
+    if (_username != null) {
+      try {
+        await _usersRef.child(_username!).update({
+          'online': true,
+          'lastSeen': ServerValue.timestamp,
+        });
+        debugPrint('User set to online: $_username');
+      } catch (e) {
+        debugPrint('Error setting user online: $e');
+      }
+    }
+  }
+
   Future<void> deleteConversation(String otherUsername) async {
     if (_username == null) return;
     
@@ -436,6 +495,9 @@ class FirebaseChatService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Set user offline before clearing data
+    await setOffline();
+    
     // Clear saved username
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('username');
@@ -446,6 +508,8 @@ class FirebaseChatService extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Set user offline before disconnecting
+    setOffline();
     disconnect();
     super.dispose();
   }

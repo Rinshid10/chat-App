@@ -8,12 +8,16 @@ class MessageBubble extends StatefulWidget {
   final Message message;
   final bool isMe;
   final int index;
+  final VoidCallback? onReply;
+  final List<Message>? allMessages;
 
   const MessageBubble({
     super.key,
     required this.message,
     required this.isMe,
     required this.index,
+    this.onReply,
+    this.allMessages,
   });
 
   @override
@@ -65,6 +69,15 @@ class _MessageBubbleState extends State<MessageBubble>
       const Color(0xFFff9f43),
     ];
     return colors[name.hashCode.abs() % colors.length];
+  }
+
+  Message? _findRepliedMessage(String? replyToId) {
+    if (replyToId == null || widget.allMessages == null) return null;
+    try {
+      return widget.allMessages!.firstWhere((m) => m.id == replyToId);
+    } catch (e) {
+      return null;
+    }
   }
 
   void _showEditDeleteMenu(BuildContext context) {
@@ -431,6 +444,9 @@ class _MessageBubbleState extends State<MessageBubble>
                     onLongPress: widget.isMe && !widget.message.isSystem
                         ? () => _showEditDeleteMenu(context)
                         : null,
+                    onTap: !widget.isMe && widget.onReply != null
+                        ? () => widget.onReply!()
+                        : null,
                     behavior: HitTestBehavior.opaque,
                     child: Container(
                       constraints: BoxConstraints(
@@ -479,6 +495,58 @@ class _MessageBubbleState extends State<MessageBubble>
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                            ),
+                          if (widget.message.replyTo != null)
+                            Builder(
+                              builder: (context) {
+                                final repliedMessage = _findRepliedMessage(widget.message.replyTo);
+                                if (repliedMessage == null) return const SizedBox.shrink();
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: widget.isMe
+                                        ? Colors.white.withOpacity(0.2)
+                                        : Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: widget.isMe
+                                            ? Colors.white.withOpacity(0.5)
+                                            : _getAvatarColor(repliedMessage.username),
+                                        width: 3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        repliedMessage.username,
+                                        style: TextStyle(
+                                          color: widget.isMe
+                                              ? Colors.white.withOpacity(0.9)
+                                              : _getAvatarColor(repliedMessage.username),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        repliedMessage.text,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: widget.isMe
+                                              ? Colors.white.withOpacity(0.7)
+                                              : Colors.white.withOpacity(0.6),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           Text(
                             widget.message.text,

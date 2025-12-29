@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/firebase_chat_service.dart';
+import '../models/message.dart';
 
 class MessageInput extends StatefulWidget {
-  const MessageInput({super.key});
+  final Message? replyingToMessage;
+  final VoidCallback? onCancelReply;
+  
+  const MessageInput({
+    super.key,
+    this.replyingToMessage,
+    this.onCancelReply,
+  });
 
   @override
   State<MessageInput> createState() => _MessageInputState();
@@ -35,6 +43,18 @@ class _MessageInputState extends State<MessageInput>
     });
   }
 
+  Color _getAvatarColor(String name) {
+    final colors = [
+      const Color(0xFF00d9ff),
+      const Color(0xFF00ff88),
+      const Color(0xFFff6b6b),
+      const Color(0xFFffd93d),
+      const Color(0xFFc56cf0),
+      const Color(0xFFff9f43),
+    ];
+    return colors[name.hashCode.abs() % colors.length];
+  }
+
   void _sendMessage() {
     if (_controller.text.trim().isNotEmpty) {
       // Animate send button
@@ -42,10 +62,14 @@ class _MessageInputState extends State<MessageInput>
         _sendBtnController.reverse();
       });
 
-      context.read<FirebaseChatService>().sendMessage(_controller.text);
+      context.read<FirebaseChatService>().sendMessage(
+        _controller.text,
+        replyTo: widget.replyingToMessage?.id,
+      );
       _controller.clear();
       setState(() => _canSend = false);
       _focusNode.requestFocus();
+      widget.onCancelReply?.call();
     }
   }
 
@@ -77,33 +101,97 @@ class _MessageInputState extends State<MessageInput>
         ),
       ),
       child: SafeArea(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withOpacity(_isFocused ? 0.15 : 0.08),
-                Colors.white.withOpacity(_isFocused ? 0.1 : 0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: _isFocused
-                  ? const Color(0xFF00d9ff).withOpacity(0.5)
-                  : Colors.white.withOpacity(0.1),
-              width: _isFocused ? 2 : 1,
-            ),
-            boxShadow: _isFocused
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF00d9ff).withOpacity(0.2),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Reply preview - at the top near text field
+            if (widget.replyingToMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 35,
+                      decoration: BoxDecoration(
+                        color: _getAvatarColor(widget.replyingToMessage!.username),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ]
-                : null,
-          ),
-          child: Row(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Replying to ${widget.replyingToMessage!.username}',
+                            style: TextStyle(
+                              color: _getAvatarColor(widget.replyingToMessage!.username),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.replyingToMessage!.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: widget.onCancelReply,
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(_isFocused ? 0.15 : 0.08),
+                    Colors.white.withOpacity(_isFocused ? 0.1 : 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: _isFocused
+                      ? const Color(0xFF00d9ff).withOpacity(0.5)
+                      : Colors.white.withOpacity(0.1),
+                  width: _isFocused ? 2 : 1,
+                ),
+                boxShadow: _isFocused
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF00d9ff).withOpacity(0.2),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
             children: [
               // Emoji button
               AnimatedContainer(
@@ -129,7 +217,9 @@ class _MessageInputState extends State<MessageInput>
                     fontSize: 16,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Type a message...',
+                    hintText: widget.replyingToMessage != null
+                        ? 'Reply to ${widget.replyingToMessage!.username}...'
+                        : 'Type a message...',
                     hintStyle: TextStyle(
                       color: Colors.white.withOpacity(0.4),
                       fontSize: 16,
@@ -211,6 +301,8 @@ class _MessageInputState extends State<MessageInput>
               ),
             ],
           ),
+        ),
+          ],
         ),
       ),
     );

@@ -7,6 +7,7 @@ class Message {
   final String? recipient;
   final String? conversationId;
   final bool isEdited;
+  final String? replyTo;
 
   Message({
     required this.id,
@@ -17,6 +18,7 @@ class Message {
     this.recipient,
     this.conversationId,
     this.isEdited = false,
+    this.replyTo,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,7 @@ class Message {
       recipient: json['recipient'],
       conversationId: json['conversationId'],
       isEdited: json['editedAt'] != null || json['isEdited'] == true,
+      replyTo: json['replyTo'],
     );
   }
 
@@ -48,6 +51,7 @@ class Message {
       if (recipient != null) 'recipient': recipient,
       if (conversationId != null) 'conversationId': conversationId,
       if (isEdited) 'isEdited': true,
+      if (replyTo != null) 'replyTo': replyTo,
     };
   }
 }

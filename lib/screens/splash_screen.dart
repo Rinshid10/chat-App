@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../services/firebase_chat_service.dart';
 import 'username_screen.dart';
 import 'user_list_screen.dart';
+import 'admin_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -35,25 +37,103 @@ class _SplashScreenState extends State<SplashScreen> {
       debugPrint(' login status. Saved username: $savedUsername');
       
       if (savedUsername != null && savedUsername.isNotEmpty) {
-        debugPrint('Auto-logging in as: $savedUsername');
-        // User is logged in, restore session
-        final chatService = context.read<FirebaseChatService>();
-        await chatService.join(savedUsername);
-        
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const UserListScreen(),
-              transitionDuration: const Duration(milliseconds: 300),
-              transitionsBuilder: (_, animation, __, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
+        // Check if admin forced logout
+        try {
+          final usersRef = FirebaseDatabase.instance.ref('users').child(savedUsername);
+          final userSnapshot = await usersRef.get();
+          
+          if (userSnapshot.exists) {
+            final userData = userSnapshot.value as Map<dynamic, dynamic>?;
+            final forceLogout = userData?['forceLogout'] == true;
+            
+            if (forceLogout) {
+              debugPrint('Admin forced logout detected. Clearing saved username.');
+              // Clear saved username to force re-login
+              await prefs.remove('username');
+              
+              // Clear the forceLogout flag (optional, or keep it until user logs in again)
+              // await usersRef.update({'forceLogout': false});
+              
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const UsernameScreen(),
+                    transitionDuration: const Duration(milliseconds: 300),
+                    transitionsBuilder: (_, animation, __, child) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      );
+                    },
+                  ),
                 );
-              },
-            ),
-          );
+              }
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error checking force logout: $e');
+          // Continue with normal login if check fails
+        }
+        
+        debugPrint('Auto-logging in as: $savedUsername');
+        try {
+          // User is logged in, restore session
+          final chatService = context.read<FirebaseChatService>();
+          await chatService.join(savedUsername);
+          
+          if (mounted) {
+            // Check if admin user
+            if (savedUsername.toLowerCase() == 'adminrinshid') {
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const AdminScreen(),
+                  transitionDuration: const Duration(milliseconds: 300),
+                  transitionsBuilder: (_, animation, __, child) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                ),
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const UserListScreen(),
+                  transitionDuration: const Duration(milliseconds: 300),
+                  transitionsBuilder: (_, animation, __, child) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                ),
+              );
+            }
+          }
+        } catch (e, stackTrace) {
+          debugPrint('Error joining Firebase: $e');
+          debugPrint('Stack trace: $stackTrace');
+          // If Firebase join fails, still go to login to let user retry
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => const UsernameScreen(),
+                transitionDuration: const Duration(milliseconds: 300),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+              ),
+            );
+          }
         }
       } else {
         // No saved username, go to login
@@ -73,8 +153,9 @@ class _SplashScreenState extends State<SplashScreen> {
           );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error checking login status: $e');
+      debugPrint('Stack trace: $stackTrace');
       // On error, go to login screen
       if (mounted) {
         Navigator.pushReplacement(
