@@ -307,10 +307,28 @@ class FirebaseChatService extends ChangeNotifier {
 
   Future<void> join(String username) async {
     _username = username;
-    await _usersRef.child(username).set({
-      'online': true,
-      'lastSeen': ServerValue.timestamp,
-    });
+    final userRef = _usersRef.child(username);
+    
+    // Get existing user data
+    final userSnapshot = await userRef.get();
+    Map<dynamic, dynamic> userData = {};
+    
+    if (userSnapshot.exists) {
+      userData = Map<dynamic, dynamic>.from(userSnapshot.value as Map);
+    }
+    
+    // Add login time to history
+    final loginTimes = userData['loginTimes'] as Map<dynamic, dynamic>? ?? {};
+    final loginTimeKey = DateTime.now().millisecondsSinceEpoch.toString();
+    loginTimes[loginTimeKey] = ServerValue.timestamp;
+    
+    // Update user data
+    userData['online'] = true;
+    userData['lastSeen'] = ServerValue.timestamp;
+    userData['loginTimes'] = loginTimes;
+    userData['forceLogout'] = false; // Clear force logout flag when user logs in
+    
+    await userRef.set(userData);
     
     // Save username to local storage
     try {
