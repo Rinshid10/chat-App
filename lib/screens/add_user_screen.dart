@@ -14,10 +14,13 @@ class AddUserScreen extends StatefulWidget {
 class _AddUserScreenState extends State<AddUserScreen>
     with SingleTickerProviderStateMixin {
   List<String> _availableUsers = [];
+  List<String> _filteredUsers = [];
   Map<String, bool> _userOnlineStatus = {};
   bool _isLoading = true;
+  String _searchQuery = '';
   StreamSubscription? _usersSubscription;
   StreamSubscription? _statusSubscription;
+  final TextEditingController _searchController = TextEditingController();
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnim;
@@ -33,7 +36,22 @@ class _AddUserScreenState extends State<AddUserScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
     );
     _fadeController.forward();
+    _searchController.addListener(_filterUsers);
     _loadAvailableUsers();
+  }
+
+  void _filterUsers() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      _searchQuery = _searchController.text;
+      if (query.isEmpty) {
+        _filteredUsers = _availableUsers;
+      } else {
+        _filteredUsers = _availableUsers
+            .where((user) => user.toLowerCase().contains(query))
+            .toList();
+      }
+    });
   }
 
   Future<void> _loadAvailableUsers() async {
@@ -42,6 +60,7 @@ class _AddUserScreenState extends State<AddUserScreen>
     
     setState(() {
       _availableUsers = users;
+      _filteredUsers = users;
       _isLoading = false;
     });
 
@@ -75,6 +94,7 @@ class _AddUserScreenState extends State<AddUserScreen>
         final updatedUsers = await chatService.getAllAvailableUsers();
         setState(() {
           _availableUsers = updatedUsers;
+          _filterUsers(); // Re-filter with new users
         });
       }
     });
@@ -122,6 +142,7 @@ class _AddUserScreenState extends State<AddUserScreen>
   void dispose() {
     _usersSubscription?.cancel();
     _statusSubscription?.cancel();
+    _searchController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -147,7 +168,7 @@ class _AddUserScreenState extends State<AddUserScreen>
               FadeTransition(
                 opacity: _fadeAnim,
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -161,43 +182,101 @@ class _AddUserScreenState extends State<AddUserScreen>
                       ),
                     ),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white.withOpacity(0.8),
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
-                              ).createShader(bounds),
-                              child: const Text(
-                                'Add Users',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                      Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: Icon(
+                                Icons.arrow_back_rounded,
+                                color: Colors.white.withOpacity(0.9),
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ShaderMask(
+                                  shaderCallback: (bounds) => const LinearGradient(
+                                    colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
+                                  ).createShader(bounds),
+                                  child: const Text(
+                                    'Add Contacts',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_availableUsers.length} users available',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.6),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Select users to add to your contacts',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 13,
-                              ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Search bar
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search users...',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 16,
                             ),
-                          ],
+                            prefixIcon: Icon(
+                              Icons.search_rounded,
+                              color: Colors.white.withOpacity(0.7),
+                              size: 24,
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.clear_rounded,
+                                      color: Colors.white.withOpacity(0.7),
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -217,14 +296,56 @@ class _AddUserScreenState extends State<AddUserScreen>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
+                                Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(0xFF00d9ff).withOpacity(0.2),
+                                        const Color(0xFF00ff88).withOpacity(0.1),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.people_outline_rounded,
+                                    size: 60,
+                                    color: Colors.white.withOpacity(0.5),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'No users available',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.8),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'All users are already in your contacts',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.5),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                    : _filteredUsers.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
                                 Icon(
-                                  Icons.people_outline_rounded,
+                                  Icons.search_off_rounded,
                                   size: 60,
                                   color: Colors.white.withOpacity(0.5),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No users available',
+                                  'No users found',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.8),
                                     fontSize: 18,
@@ -233,7 +354,7 @@ class _AddUserScreenState extends State<AddUserScreen>
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'All users are already in your contacts',
+                                  'Try a different search term',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.4),
                                     fontSize: 14,
@@ -246,9 +367,9 @@ class _AddUserScreenState extends State<AddUserScreen>
                             opacity: _fadeAnim,
                             child: ListView.builder(
                               padding: const EdgeInsets.all(16),
-                              itemCount: _availableUsers.length,
+                              itemCount: _filteredUsers.length,
                               itemBuilder: (context, index) {
-                                final username = _availableUsers[index];
+                                final username = _filteredUsers[index];
                                 final isOnline = _userOnlineStatus[username] ?? false;
                                 final avatarColor = _getAvatarColor(username);
                                 
@@ -257,115 +378,171 @@ class _AddUserScreenState extends State<AddUserScreen>
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        Colors.white.withOpacity(0.1),
-                                        Colors.white.withOpacity(0.05),
+                                        Colors.white.withOpacity(0.12),
+                                        Colors.white.withOpacity(0.06),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
+                                      color: Colors.white.withOpacity(0.15),
+                                      width: 1,
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    leading: Stack(
-                                      children: [
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                avatarColor,
-                                                avatarColor.withOpacity(0.7),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () => _addContact(username),
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            // Avatar
+                                            Stack(
+                                              children: [
+                                                Container(
+                                                  width: 56,
+                                                  height: 56,
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        avatarColor,
+                                                        avatarColor.withOpacity(0.7),
+                                                      ],
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(16),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: avatarColor.withOpacity(0.4),
+                                                        blurRadius: 12,
+                                                        offset: const Offset(0, 4),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      username[0].toUpperCase(),
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 22,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (isOnline)
+                                                  Positioned(
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    child: Container(
+                                                      width: 16,
+                                                      height: 16,
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFF00ff88),
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: const Color(0xFF1a1a2e),
+                                                          width: 2.5,
+                                                        ),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: const Color(0xFF00ff88)
+                                                                .withOpacity(0.6),
+                                                            blurRadius: 6,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
                                               ],
                                             ),
-                                            borderRadius: BorderRadius.circular(12),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: avatarColor.withOpacity(0.3),
-                                                blurRadius: 8,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              username[0].toUpperCase(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        if (isOnline)
-                                          Positioned(
-                                            right: 0,
-                                            bottom: 0,
-                                            child: Container(
-                                              width: 14,
-                                              height: 14,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF00ff88),
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: const Color(0xFF1a1a2e),
-                                                  width: 2,
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(0xFF00ff88)
-                                                        .withOpacity(0.5),
-                                                    blurRadius: 4,
+                                            const SizedBox(width: 16),
+                                            // User info
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    username,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 17,
+                                                      fontWeight: FontWeight.w600,
+                                                      letterSpacing: 0.3,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 6,
+                                                        height: 6,
+                                                        decoration: BoxDecoration(
+                                                          color: isOnline
+                                                              ? const Color(0xFF00ff88)
+                                                              : Colors.white.withOpacity(0.3),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        isOnline ? 'Online' : 'Offline',
+                                                        style: TextStyle(
+                                                          color: isOnline
+                                                              ? const Color(0xFF00ff88)
+                                                              : Colors.white.withOpacity(0.5),
+                                                          fontSize: 13,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                          ),
-                                      ],
-                                    ),
-                                    title: Text(
-                                      username,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      isOnline ? 'Online' : 'Offline',
-                                      style: TextStyle(
-                                        color: isOnline
-                                            ? const Color(0xFF00ff88)
-                                            : Colors.white.withOpacity(0.4),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    trailing: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
+                                            // Add button
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                gradient: const LinearGradient(
+                                                  colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
+                                                ),
+                                                borderRadius: BorderRadius.circular(14),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: const Color(0xFF00d9ff).withOpacity(0.4),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  onTap: () => _addContact(username),
+                                                  borderRadius: BorderRadius.circular(14),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(12),
+                                                    child: const Icon(
+                                                      Icons.person_add_rounded,
+                                                      color: Colors.white,
+                                                      size: 22,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFF00d9ff).withOpacity(0.3),
-                                            blurRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                      child: IconButton(
-                                        onPressed: () => _addContact(username),
-                                        icon: const Icon(
-                                          Icons.add_rounded,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                        tooltip: 'Add to contacts',
                                       ),
                                     ),
                                   ),
