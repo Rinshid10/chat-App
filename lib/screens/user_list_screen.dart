@@ -2,9 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_database/firebase_database.dart';
+import '../services/auth_service.dart';
 import '../services/firebase_chat_service.dart';
 import 'chat_screen.dart';
-import 'username_screen.dart';
+import 'auth_screen.dart';
 import 'add_user_screen.dart';
 
 class UserListScreen extends StatefulWidget {
@@ -395,14 +396,18 @@ class _UserListScreenState extends State<UserListScreen>
                         ),
                         child: IconButton(
                           onPressed: () async {
+                            final authService = context.read<AuthService>();
                             await chatService.logout();
+                            await authService.signOut();
                             if (mounted) {
                               Navigator.pushReplacement(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (_, __, ___) => const UsernameScreen(),
-                                  transitionDuration: const Duration(milliseconds: 300),
-                                  transitionsBuilder: (_, animation, __, child) {
+                                  pageBuilder: (_, __, ___) => const AuthScreen(),
+                                  transitionDuration:
+                                      const Duration(milliseconds: 300),
+                                  transitionsBuilder:
+                                      (_, animation, __, child) {
                                     return FadeTransition(
                                       opacity: animation,
                                       child: child,

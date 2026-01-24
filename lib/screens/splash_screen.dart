@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_database/firebase_database.dart';
+
+import '../services/auth_service.dart';
 import '../services/firebase_chat_service.dart';
-import 'username_screen.dart';
+import 'auth_screen.dart';
 import 'user_list_screen.dart';
 import 'admin_screen.dart';
 
@@ -31,34 +32,56 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUsername = prefs.getString('username');
-      
-      debugPrint('Checking login status. Saved username: $savedUsername');
-      
-      if (savedUsername != null && savedUsername.isNotEmpty) {
+      final authService = context.read<AuthService>();
+      final user = authService.currentUser;
+
+      if (user != null) {
+        final username = user.displayName?.trim() ?? '';
+        debugPrint('FirebaseAuth user detected. uid=${user.uid}, username=$username');
+
+        if (username.isEmpty) {
+          // No display name set – force re-auth so user can set username properly
+          await authService.signOut();
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => const AuthScreen(),
+                transitionDuration: const Duration(milliseconds: 300),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+              ),
+            );
+          }
+          return;
+        }
+
         // Check if admin forced logout
         try {
-          final usersRef = FirebaseDatabase.instance.ref('users').child(savedUsername);
+          final usersRef = FirebaseDatabase.instance.ref('users').child(username);
           final userSnapshot = await usersRef.get();
-          
+
           if (userSnapshot.exists) {
             final userData = userSnapshot.value as Map<dynamic, dynamic>?;
             final forceLogout = userData?['forceLogout'] == true;
-            
+
             if (forceLogout) {
-              debugPrint('Admin forced logout detected. Clearing saved username.');
-              // Clear saved username to force re-login
-              await prefs.remove('username');
-              
-              // Clear the forceLogout flag (optional, or keep it until user logs in again)
+              debugPrint('Admin forced logout detected for $username. Signing out.');
+
+              // Optionally clear the flag here or let it be reset on next login
               // await usersRef.update({'forceLogout': false});
-              
+
+              await authService.signOut();
+
               if (mounted) {
                 Navigator.pushReplacement(
                   context,
                   PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const UsernameScreen(),
+                    pageBuilder: (_, __, ___) => const AuthScreen(),
                     transitionDuration: const Duration(milliseconds: 300),
                     transitionsBuilder: (_, animation, __, child) {
                       return FadeTransition(
@@ -76,16 +99,16 @@ class _SplashScreenState extends State<SplashScreen> {
           debugPrint('Error checking force logout: $e');
           // Continue with normal login if check fails
         }
-        
-        debugPrint('Auto-logging in as: $savedUsername');
+
+        debugPrint('Auto-logging in as authenticated user: $username');
         try {
           // User is logged in, restore session
           final chatService = context.read<FirebaseChatService>();
-          await chatService.join(savedUsername);
-          
+          await chatService.join(username);
+
           if (mounted) {
             // Check if admin user
-            if (savedUsername.toLowerCase() == 'adminrinshid') {
+            if (username.toLowerCase() == 'adminrinshid') {
               Navigator.pushReplacement(
                 context,
                 PageRouteBuilder(
@@ -118,12 +141,12 @@ class _SplashScreenState extends State<SplashScreen> {
         } catch (e, stackTrace) {
           debugPrint('Error joining Firebase: $e');
           debugPrint('Stack trace: $stackTrace');
-          // If Firebase join fails, still go to login to let user retry
+          // If Firebase join fails, still go to auth to let user retry
           if (mounted) {
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(
-                pageBuilder: (_, __, ___) => const UsernameScreen(),
+                pageBuilder: (_, __, ___) => const AuthScreen(),
                 transitionDuration: const Duration(milliseconds: 300),
                 transitionsBuilder: (_, animation, __, child) {
                   return FadeTransition(
@@ -136,12 +159,12 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         }
       } else {
-        // No saved username, go to login
+        // No authenticated user, go to auth screen
         if (mounted) {
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const UsernameScreen(),
+              pageBuilder: (_, __, ___) => const AuthScreen(),
               transitionDuration: const Duration(milliseconds: 300),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(
@@ -156,12 +179,12 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e, stackTrace) {
       debugPrint('Error checking login status: $e');
       debugPrint('Stack trace: $stackTrace');
-      // On error, go to login screen
+      // On error, go to auth screen
       if (mounted) {
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const UsernameScreen(),
+            pageBuilder: (_, __, ___) => const AuthScreen(),
             transitionDuration: const Duration(milliseconds: 300),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(

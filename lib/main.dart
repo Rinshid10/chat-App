@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'services/auth_service.dart';
 import 'services/firebase_chat_service.dart';
 import 'services/admin_service.dart';
 import 'screens/splash_screen.dart';
@@ -51,6 +52,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<AuthService>(
+          create: (_) => AuthService(),
+        ),
         ChangeNotifierProvider<FirebaseChatService>(
           create: (_) {
             final chatService = FirebaseChatService();
