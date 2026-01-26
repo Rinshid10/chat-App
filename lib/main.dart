@@ -5,8 +5,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/firebase_chat_service.dart';
-import 'services/admin_service.dart';
-import 'screens/splash_screen.dart';
+import 'services/agora_call_service.dart';
+import 'services/call_notification_service.dart';
+import 'admin_flow/services/admin_service.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
+import 'user_flow/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +56,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider(),
+        ),
         ChangeNotifierProvider<AuthService>(
           create: (_) => AuthService(),
         ),
@@ -64,6 +71,12 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AdminService>(
           create: (_) => AdminService(),
+        ),
+        ChangeNotifierProvider<AgoraCallService>(
+          create: (_) => AgoraCallService(),
+        ),
+        ChangeNotifierProvider<CallNotificationService>(
+          create: (_) => CallNotificationService(),
         ),
       ],
       child: const AppLifecycleWrapper(),
@@ -109,19 +122,21 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> with WidgetsB
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Chat App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const SplashScreen(),
-      builder: (context, child) {
-        // Add error boundary for release mode
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-          child: child ?? const SizedBox(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp(
+          title: 'Chat App',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeProvider.themeMode,
+          home: const SplashScreen(),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+              child: child ?? const SizedBox(),
+            );
+          },
         );
       },
     );

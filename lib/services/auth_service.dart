@@ -84,13 +84,40 @@ class AuthService extends ChangeNotifier {
       // Ensure Firestore document exists / is updated on login too
       final user = credential.user;
       if (user != null) {
-        final username = user.displayName ?? email.split('@').first;
-        await _upsertFirestoreUser(
-          user: user,
-          username: username,
-          email: user.email ?? email,
-          password: password,
-        );
+        // Prefer existing displayName; if missing, derive from email and save it
+        String username = user.displayName?.trim() ?? '';
+
+        if (username.isEmpty) {
+          final effectiveEmail = (user.email ?? email).trim();
+          if (effectiveEmail.isNotEmpty && effectiveEmail.contains('@')) {
+            username = effectiveEmail.split('@').first;
+          }
+
+          if (username.isNotEmpty) {
+            try {
+              await user.updateDisplayName(username);
+              await user.reload();
+              debugPrint(
+                'displayName was empty on signIn; set to derived username=$username',
+              );
+            } catch (e) {
+              debugPrint('Error updating displayName on signIn: $e');
+            }
+          }
+        }
+
+        if (username.isNotEmpty) {
+          await _upsertFirestoreUser(
+            user: user,
+            username: username,
+            email: user.email ?? email,
+            password: password,
+          );
+        } else {
+          debugPrint(
+            'Warning: Could not determine username on signIn; skipping Firestore upsert.',
+          );
+        }
       }
 
       notifyListeners();

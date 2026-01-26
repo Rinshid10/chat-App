@@ -17,6 +17,8 @@ class AppColorsLight {
   static const Color onlineGreen = Color(0xFF25D366);
   static const Color error = Color(0xFFDC3545);
   static const Color shadow = Color(0x0A000000);
+  static const Color glassBackground = Color(0xB3FFFFFF);
+  static const Color glassBorder = Color(0x4DFFFFFF);
 }
 
 class AppColorsDark {
@@ -36,6 +38,8 @@ class AppColorsDark {
   static const Color onlineGreen = Color(0xFF25D366);
   static const Color error = Color(0xFFFF6B6B);
   static const Color shadow = Color(0x1A000000);
+  static const Color glassBackground = Color(0x991F2C34);
+  static const Color glassBorder = Color(0x14FFFFFF);
 }
 
 class AppAvatarColors {
@@ -59,4 +63,12 @@ extension AppColorScheme on ColorScheme {
       : AppColorsLight.receivedBubble;
 
   Color get onlineGreen => const Color(0xFF25D366);
+
+  Color get glassBackground => brightness == Brightness.dark
+      ? AppColorsDark.glassBackground
+      : AppColorsLight.glassBackground;
+
+  Color get glassBorder => brightness == Brightness.dark
+      ? AppColorsDark.glassBorder
+      : AppColorsLight.glassBorder;
 }

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(flutter pub upgrade:*)",
+      "Bash(findstr:*)",
+      "Bash(flutter build:*)"
     ]
   }
 }
