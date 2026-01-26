@@ -10,6 +10,7 @@ import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/page_transitions.dart';
 import 'package:chatapp/widgets/glass_container.dart';
+import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/user_flow/screens/auth_screen.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -85,54 +86,13 @@ class _AdminScreenState extends State<AdminScreen>
   ) async {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showConfirmationSheet<bool>(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Delete User',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              Text(
-                'Are you sure you want to delete \"$username\"? This action cannot be undone.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Delete User',
+      message: 'Are you sure you want to delete "$username"? This action cannot be undone.',
+      confirmText: 'Delete',
+      icon: Icons.person_remove_rounded,
+      isDanger: true,
     );
 
     if (confirm == true) {

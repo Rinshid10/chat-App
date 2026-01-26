@@ -5,9 +5,11 @@ import 'package:firebase_database/firebase_database.dart';
 
 import 'package:chatapp/services/auth_service.dart';
 import 'package:chatapp/services/firebase_chat_service.dart';
+import 'package:chatapp/services/pin_service.dart';
 import 'package:chatapp/utils/page_transitions.dart';
 import 'package:chatapp/user_flow/screens/auth_screen.dart';
 import 'package:chatapp/user_flow/screens/user_list_screen.dart';
+import 'package:chatapp/user_flow/screens/pin_lock_screen.dart';
 import 'package:chatapp/admin_flow/screens/admin_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -85,6 +87,32 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         } catch (e) {
           debugPrint('Error checking force logout: $e');
+        }
+
+        // Check if PIN lock is enabled
+        final pinService = context.read<PinService>();
+        final isPinEnabled = await pinService.checkPinEnabled();
+
+        if (isPinEnabled && mounted) {
+          debugPrint('PIN lock is enabled. Showing PIN screen.');
+
+          // Navigate to PIN lock screen and wait for result
+          final verified = await Navigator.push<bool>(
+            context,
+            FadeScalePageRoute(
+              page: PinLockScreen(
+                onSuccess: () => Navigator.pop(context, true),
+              ),
+            ),
+          );
+
+          if (verified != true) {
+            // User failed PIN or cancelled - stay on splash
+            debugPrint('PIN verification failed or cancelled.');
+            return;
+          }
+
+          debugPrint('PIN verified successfully.');
         }
 
         debugPrint('Auto-logging in as authenticated user: $username');

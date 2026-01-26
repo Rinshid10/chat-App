@@ -130,10 +130,10 @@ class FirebaseChatService extends ChangeNotifier {
                 // Join remaining parts in case username has underscore (unlikely but possible)
                 final user2 = parts.sublist(1).join('_');
                 
-                // Add the other user (not the current user)
-                if (user1 == _username && user2 != _username) {
+                // Add the other user (not the current user and not admin)
+                if (user1 == _username && user2 != _username && user2 != 'adminrinshid') {
                   usersWithMessages.add(user2);
-                } else if (user2 == _username && user1 != _username) {
+                } else if (user2 == _username && user1 != _username && user1 != 'adminrinshid') {
                   usersWithMessages.add(user1);
                 }
               }
@@ -197,8 +197,10 @@ class FirebaseChatService extends ChangeNotifier {
       if (data != null) {
         for (var entry in data.entries) {
           final username = entry.key as String;
-          // Exclude current user and already added contacts
-          if (username != _username && !contactsSet.contains(username)) {
+          // Exclude current user, admin user, and already added contacts
+          if (username != _username && 
+              username != 'adminrinshid' && 
+              !contactsSet.contains(username)) {
             availableUsers.add(username);
           }
         }

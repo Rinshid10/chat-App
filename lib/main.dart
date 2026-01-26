@@ -7,6 +7,7 @@ import 'services/auth_service.dart';
 import 'services/firebase_chat_service.dart';
 import 'services/agora_call_service.dart';
 import 'services/call_notification_service.dart';
+import 'services/pin_service.dart';
 import 'admin_flow/services/admin_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
@@ -77,6 +78,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<CallNotificationService>(
           create: (_) => CallNotificationService(),
+        ),
+        ChangeNotifierProvider<PinService>(
+          create: (_) => PinService(),
         ),
       ],
       child: const AppLifecycleWrapper(),

@@ -7,6 +7,7 @@ import 'package:chatapp/user_flow/widgets/message_bubble.dart';
 import 'package:chatapp/user_flow/widgets/message_input.dart';
 import 'package:chatapp/user_flow/screens/call_screen.dart';
 import 'package:chatapp/widgets/glass_container.dart';
+import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/models/message.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
@@ -57,35 +58,12 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _showCallConfirmation(BuildContext context) async {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    final shouldStartCall = await showDialog<bool>(
+    final shouldStartCall = await showConfirmationSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Start Call',
-          style: textTheme.titleLarge,
-        ),
-        content: Text(
-          'Do you want to start an audio call?',
-          style: textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-            ),
-            child: Text('Call'),
-          ),
-        ],
-      ),
+      title: 'Start Call',
+      message: 'Do you want to start an audio call with ${widget.otherUsername}?',
+      confirmText: 'Call',
+      icon: Icons.call_rounded,
     );
 
     if (shouldStartCall == true && mounted) {
@@ -111,22 +89,12 @@ class _ChatScreenState extends State<ChatScreen>
 
     if (status.isPermanentlyDenied) {
       if (mounted) {
-        final shouldOpenSettings = await showDialog<bool>(
+        final shouldOpenSettings = await showConfirmationSheet<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Microphone Permission Required'),
-            content: Text('Please enable microphone permission in app settings'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text('Open Settings'),
-              ),
-            ],
-          ),
+          title: 'Microphone Permission Required',
+          message: 'Please enable microphone permission in app settings to make voice calls.',
+          confirmText: 'Open Settings',
+          icon: Icons.mic_off_rounded,
         );
 
         if (shouldOpenSettings == true) {

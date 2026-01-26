@@ -5,6 +5,7 @@ import 'package:chatapp/services/call_notification_service.dart';
 import 'package:chatapp/services/firebase_chat_service.dart';
 import 'package:chatapp/user_flow/screens/call_screen.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
+import 'package:chatapp/widgets/confirmation_sheet.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final String callerUsername;
@@ -49,19 +50,17 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
 
       if (status.isPermanentlyDenied) {
         if (mounted) {
-          await showDialog(
+          final shouldOpenSettings = await showConfirmationSheet<bool>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Microphone Permission Required'),
-              content: Text('Please enable microphone permission in app settings'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('OK'),
-                ),
-              ],
-            ),
+            title: 'Microphone Permission Required',
+            message: 'Please enable microphone permission in app settings to accept calls.',
+            confirmText: 'Open Settings',
+            icon: Icons.mic_off_rounded,
           );
+
+          if (shouldOpenSettings == true) {
+            await openAppSettings();
+          }
         }
         return;
       }

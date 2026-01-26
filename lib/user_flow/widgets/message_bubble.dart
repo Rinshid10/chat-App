@@ -7,6 +7,7 @@ import 'package:chatapp/services/firebase_chat_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/widgets/glass_container.dart';
+import 'package:chatapp/widgets/confirmation_sheet.dart';
 
 class MessageBubble extends StatefulWidget {
   final Message message;
@@ -126,139 +127,39 @@ class _MessageBubbleState extends State<MessageBubble>
     );
   }
 
-  void _showEditDialog(
+  Future<void> _showEditDialog(
     BuildContext context,
     FirebaseChatService chatService,
-  ) {
-    final controller = TextEditingController(text: widget.message.text);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showDialog(
+  ) async {
+    final newText = await showInputSheet(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Edit Message',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                style: TextStyle(color: colorScheme.onSurface),
-                decoration: const InputDecoration(
-                  hintText: 'Type your message...',
-                ),
-                maxLines: 4,
-                autofocus: true,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () {
-                      if (controller.text.trim().isNotEmpty) {
-                        chatService.editMessage(
-                          widget.message.id,
-                          controller.text.trim(),
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Text(
-                      'Save',
-                      style: TextStyle(color: colorScheme.primary),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Edit Message',
+      initialValue: widget.message.text,
+      hintText: 'Type your message...',
+      confirmText: 'Save',
     );
+
+    if (newText != null && newText.isNotEmpty) {
+      chatService.editMessage(widget.message.id, newText);
+    }
   }
 
-  void _showDeleteConfirmation(
+  Future<void> _showDeleteConfirmation(
     BuildContext context,
     FirebaseChatService chatService,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showDialog(
+  ) async {
+    final confirmed = await showConfirmationSheet<bool>(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Delete Message?',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'This action cannot be undone.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () {
-                      chatService.deleteMessage(widget.message.id);
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Delete Message?',
+      message: 'This action cannot be undone.',
+      confirmText: 'Delete',
+      icon: Icons.delete_outline_rounded,
+      isDanger: true,
     );
+
+    if (confirmed == true) {
+      chatService.deleteMessage(widget.message.id);
+    }
   }
 
   @override

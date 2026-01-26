@@ -10,6 +10,7 @@ import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/page_transitions.dart';
 import 'package:chatapp/widgets/glass_container.dart';
+import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/user_flow/screens/chat_screen.dart';
 import 'package:chatapp/user_flow/screens/add_user_screen.dart';
 import 'package:chatapp/user_flow/screens/incoming_call_screen.dart';
@@ -146,6 +147,9 @@ class _UserListScreenState extends State<UserListScreen>
     allUsers.addAll(contacts);
     allUsers.addAll(usersWithMessages);
 
+    // Filter out admin user
+    allUsers.remove('adminrinshid');
+
     setState(() {
       _users = allUsers.toList();
       _isLoading = false;
@@ -211,6 +215,9 @@ class _UserListScreenState extends State<UserListScreen>
     allUsers.addAll(contacts);
     allUsers.addAll(usersWithMessages);
 
+    // Filter out admin user
+    allUsers.remove('adminrinshid');
+
     if (mounted) {
       setState(() {
         _users = allUsers.toList();
@@ -228,75 +235,30 @@ class _UserListScreenState extends State<UserListScreen>
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String username) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showDialog(
+  Future<void> _showDeleteConfirmation(BuildContext context, String username) async {
+    final confirmed = await showConfirmationSheet<bool>(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Delete Conversation?',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              Text(
-                'Delete all messages with $username?\nThis action cannot be undone.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style:
-                          TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      final chatService =
-                          context.read<FirebaseChatService>();
-                      try {
-                        await chatService.removeContact(username);
-                        await chatService.deleteConversation(username);
-                        if (mounted) _loadUsers();
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text('Error removing contact: $e'),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Delete Conversation?',
+      message: 'Delete all messages with $username?\nThis action cannot be undone.',
+      confirmText: 'Delete',
+      icon: Icons.delete_outline_rounded,
+      isDanger: true,
     );
+
+    if (confirmed == true && mounted) {
+      final chatService = context.read<FirebaseChatService>();
+      try {
+        await chatService.removeContact(username);
+        await chatService.deleteConversation(username);
+        if (mounted) _loadUsers();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error removing contact: $e')),
+          );
+        }
+      }
+    }
   }
 
 

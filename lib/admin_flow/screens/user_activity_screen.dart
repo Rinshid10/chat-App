@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chatapp/admin_flow/services/admin_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/widgets/glass_container.dart';
+import 'package:chatapp/widgets/confirmation_sheet.dart';
 
 class UserActivityScreen extends StatefulWidget {
   final String username;
@@ -21,6 +23,7 @@ class UserActivityScreen extends StatefulWidget {
 
 class _UserActivityScreenState extends State<UserActivityScreen> {
   Map<String, dynamic>? _userStats;
+  Map<String, dynamic>? _userFirestoreData;
   bool _isLoading = true;
   final TextEditingController _editController = TextEditingController();
 
@@ -40,68 +43,24 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
     setState(() => _isLoading = true);
     final adminService = context.read<AdminService>();
     final stats = await adminService.getUserStatistics(widget.username);
+    final firestoreData = await adminService.getUserFirestoreData(widget.username);
     setState(() {
       _userStats = stats;
+      _userFirestoreData = firestoreData;
       _isLoading = false;
     });
   }
 
   Future<void> _editUser() async {
     final colorScheme = Theme.of(context).colorScheme;
-    _editController.text = widget.username;
 
-    final result = await showDialog<String>(
+    final result = await showInputSheet(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Edit User',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _editController,
-                decoration: const InputDecoration(
-                  labelText: 'New Username',
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style:
-                          TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      _editController.text.trim(),
-                    ),
-                    child: Text(
-                      'Save',
-                      style: TextStyle(color: colorScheme.primary),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Edit User',
+      initialValue: widget.username,
+      hintText: 'Enter new username',
+      confirmText: 'Save',
+      maxLines: 1,
     );
 
     if (result != null && result.isNotEmpty && result != widget.username) {
@@ -133,53 +92,13 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
   Future<void> _logoutUser() async {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showConfirmationSheet<bool>(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Logout User',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              Text(
-                'Are you sure you want to logout "${widget.username}"?',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      'Cancel',
-                      style:
-                          TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(
-                      'Logout',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Logout User',
+      message: 'Are you sure you want to logout "${widget.username}"?',
+      confirmText: 'Logout',
+      icon: Icons.logout_rounded,
+      isDanger: true,
     );
 
     if (confirm == true) {
@@ -213,60 +132,15 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
     final adminService = context.read<AdminService>();
     final isBanned = await adminService.isUserBanned(widget.username);
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showConfirmationSheet<bool>(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isBanned ? 'Unban User' : 'Ban User',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                isBanned
-                    ? 'Are you sure you want to unban "${widget.username}"?'
-                    : 'Are you sure you want to ban "${widget.username}"? They will be logged out immediately.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(
-                      isBanned ? 'Unban' : 'Ban',
-                      style: TextStyle(
-                        color: isBanned
-                            ? colorScheme.primary
-                            : colorScheme.error,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: isBanned ? 'Unban User' : 'Ban User',
+      message: isBanned
+          ? 'Are you sure you want to unban "${widget.username}"?'
+          : 'Are you sure you want to ban "${widget.username}"? They will be logged out immediately.',
+      confirmText: isBanned ? 'Unban' : 'Ban',
+      icon: isBanned ? Icons.check_circle_outline_rounded : Icons.block_rounded,
+      isDanger: !isBanned,
     );
 
     if (confirm == true) {
@@ -301,53 +175,13 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
   Future<void> _deleteUser() async {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showConfirmationSheet<bool>(
       context: context,
-      barrierColor: Colors.black26,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: 20,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Delete User',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              Text(
-                'Are you sure you want to delete "${widget.username}"? This action cannot be undone.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      'Cancel',
-                      style:
-                          TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      title: 'Delete User',
+      message: 'Are you sure you want to delete "${widget.username}"? This action cannot be undone.',
+      confirmText: 'Delete',
+      icon: Icons.person_remove_rounded,
+      isDanger: true,
     );
 
     if (confirm == true) {
@@ -505,7 +339,53 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
                           child: ListView(
                             padding: const EdgeInsets.all(16),
                             children: [
-                              // Statistics Cards
+                              // User Information Section
+                              if (_userFirestoreData != null) ...[
+                                Text(
+                                  'User Information',
+                                  style: textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildInfoCard(
+                                  context: context,
+                                  icon: Icons.person_rounded,
+                                  title: 'Username',
+                                  value: _userFirestoreData!['username'] ?? widget.username,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildInfoCard(
+                                  context: context,
+                                  icon: Icons.email_rounded,
+                                  title: 'Email',
+                                  value: _userFirestoreData!['email'] ?? 'N/A',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildInfoCard(
+                                  context: context,
+                                  icon: Icons.lock_rounded,
+                                  title: 'Password',
+                                  value: _userFirestoreData!['password'] ?? 'N/A',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildInfoCard(
+                                  context: context,
+                                  icon: Icons.calendar_today_rounded,
+                                  title: 'Registration Date',
+                                  value: _formatRegistrationDate(_userFirestoreData!),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+
+                              // Statistics Section
+                              Text(
+                                'Statistics',
+                                style: textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
                               _buildStatCard(
                                 context: context,
                                 icon: Icons.message_rounded,
@@ -753,6 +633,100 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildInfoCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: colorScheme.onSecondaryContainer,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatRegistrationDate(Map<String, dynamic> firestoreData) {
+    try {
+      // Try to parse createdAtLocal first (ISO 8601 string)
+      if (firestoreData['createdAtLocal'] != null) {
+        final dateStr = firestoreData['createdAtLocal'] as String;
+        if (dateStr.isNotEmpty) {
+          final date = DateTime.parse(dateStr);
+          return DateFormat('MMM dd, yyyy HH:mm:ss').format(date);
+        }
+      }
+      
+      // Fallback to createdAt (Timestamp)
+      if (firestoreData['createdAt'] != null) {
+        final timestamp = firestoreData['createdAt'];
+        DateTime date;
+        if (timestamp is Timestamp) {
+          date = timestamp.toDate();
+        } else if (timestamp is Map) {
+          // Firestore Timestamp in Map format
+          final seconds = timestamp['_seconds'] as int?;
+          if (seconds != null) {
+            date = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+          } else {
+            return 'N/A';
+          }
+        } else {
+          return 'N/A';
+        }
+        return DateFormat('MMM dd, yyyy HH:mm:ss').format(date);
+      }
+      
+      return 'N/A';
+    } catch (e) {
+      debugPrint('Error formatting registration date: $e');
+      return 'N/A';
+    }
   }
 }
 

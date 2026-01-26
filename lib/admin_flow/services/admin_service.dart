@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chatapp/models/message.dart';
 
@@ -258,6 +260,71 @@ class AdminService extends ChangeNotifier {
       'totalConversations': totalConversations,
       'topUsers': topUsers,
     };
+  }
+
+  // Get user Firestore data (username, email, password, createdAt)
+  Future<Map<String, dynamic>?> getUserFirestoreData(String username) async {
+    log('Getting user Firestore data for username: $username',name: 'getUserFirestoreData');
+    try {
+      // Try exact username match first
+      log( 'Getting user Firestore data for username: $username',name: 'getUserFirestoreData');
+      var querySnapshot = await FirebaseFirestore.instance
+          .collection('userss__id')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+log(' Query snapshot: ${querySnapshot.docs.length}',name: 'getUserFirestoreData');
+log('Query snapshot docs: ${querySnapshot.docs.first.data()}',name: 'getUserFirestoreData');
+      // If not found, try lowercase match
+      if (querySnapshot.docs.isEmpty) {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('userss__id')
+            .where('username', isEqualTo: username.toLowerCase())
+            .limit(1)
+            .get();
+      }else{
+        log('User found in Firestore: $username',name: 'getUserFirestoreData');
+      }
+
+      // If still not found, search all docs and do case-insensitive comparison
+      if (querySnapshot.docs.isEmpty) {
+        final allDocs = await FirebaseFirestore.instance
+            .collection('userss__id')
+            .get();
+
+        for (var doc in allDocs.docs) {
+          final data = doc.data();
+          final storedUsername = data['username']?.toString() ?? '';
+          log('Stored Username: $storedUsername',name: 'getUserFirestoreData');
+          if (storedUsername.toLowerCase() == username.toLowerCase()) {
+            return {
+              'username': data['username'] ?? username,
+              'email': data['email'] ?? '',
+              'password': data['pass'] ?? '',
+              'createdAt': data['createdAt'],
+              'createdAtLocal': data['createdAtLocal'] ?? '',
+              'uid': doc.id,
+            };
+          }
+        }
+        log('User not found in Firestore: $username',name: 'getUserFirestoreData');
+        return null;
+      }
+
+      final doc = querySnapshot.docs.first;
+      final data = doc.data();
+      return {
+        'username': data['username'] ?? username,
+        'email': data['email'] ?? '',
+        'password': data['pass'] ?? '',
+        'createdAt': data['createdAt'],
+        'createdAtLocal': data['createdAtLocal'] ?? '',
+        'uid': doc.id,
+      };
+    } catch (e) {
+      debugPrint('Error fetching user Firestore data: $e');
+      return null;
+    }
   }
 
   // Get user statistics
