@@ -95,6 +95,7 @@ class AppLifecycleWrapper extends StatefulWidget {
   State<AppLifecycleWrapper> createState() => _AppLifecycleWrapperState();
 }
 
+
 class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> with WidgetsBindingObserver {
   @override
   void initState() {

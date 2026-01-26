@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:provider/provider.dart';
@@ -92,8 +93,20 @@ class _AuthScreenState extends State<AuthScreen>
 
       if (!mounted) return;
 
+      // Disconnect with timeout to prevent hanging on iOS web
       final chatService = context.read<FirebaseChatService>();
-      await chatService.disconnect();
+      try {
+        await chatService.disconnect().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            debugPrint('Disconnect timeout - proceeding anyway');
+          },
+        );
+      } catch (e) {
+        debugPrint('Disconnect error (ignored): $e');
+      }
+
+      if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
@@ -188,7 +201,7 @@ class _AuthScreenState extends State<AuthScreen>
                   Text(
                     _isLoginMode
                         ? 'Login to continue chatting'
-                        : 'Sign up to start using ChatFlow',
+                        : 'Sign up to start using Cme',
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),

@@ -194,7 +194,7 @@ class _UsernameScreenState extends State<UsernameScreen>
                           colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
                         ).createShader(bounds),
                         child: const Text(
-                          'ChatFlow',
+                          'Cme',
                           style: TextStyle(
                             fontSize: 42,
                             fontWeight: FontWeight.bold,

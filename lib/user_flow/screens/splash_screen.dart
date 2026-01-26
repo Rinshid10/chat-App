@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -69,7 +71,13 @@ class _SplashScreenState extends State<SplashScreen> {
         try {
           final usersRef =
               FirebaseDatabase.instance.ref('users').child(username);
-          final userSnapshot = await usersRef.get();
+          final userSnapshot = await usersRef.get().timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('Force logout check timeout - proceeding anyway');
+              throw TimeoutException('Firebase get timeout');
+            },
+          );
 
           if (userSnapshot.exists) {
             final userData =
@@ -118,7 +126,13 @@ class _SplashScreenState extends State<SplashScreen> {
         debugPrint('Auto-logging in as authenticated user: $username');
         try {
           final chatService = context.read<FirebaseChatService>();
-          await chatService.join(username);
+          // Add timeout to prevent hanging on iOS web
+          await chatService.join(username).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('Join timeout on iOS web - proceeding anyway');
+            },
+          );
 
           if (mounted) {
             final isAdmin =
@@ -175,7 +189,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'ChatFlow',
+              'Cme',
               style: TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
