@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
-import '../models/message.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:chatapp/models/message.dart';
 
 class AdminService extends ChangeNotifier {
   final DatabaseReference _usersRef = FirebaseDatabase.instance.ref('users');
-  final DatabaseReference _conversationsRef = FirebaseDatabase.instance.ref('conversations');
+  final DatabaseReference _conversationsRef =
+      FirebaseDatabase.instance.ref('conversations');
 
   List<String> _users = [];
   Map<String, List<Message>> _allMessages = {};
@@ -19,6 +24,30 @@ class AdminService extends ChangeNotifier {
   Map<String, bool> get userOnlineStatus => _userOnlineStatus;
   bool get isLoading => _isLoading;
 
+  // Search and filter
+  String _searchQuery = '';
+  String _sortBy = 'name'; // 'name', 'activity', 'messages'
+  bool _showOnlineOnly = false;
+
+  String get searchQuery => _searchQuery;
+  String get sortBy => _sortBy;
+  bool get showOnlineOnly => _showOnlineOnly;
+
+  void setSearchQuery(String query) {
+    _searchQuery = query.toLowerCase();
+    notifyListeners();
+  }
+
+  void setSortBy(String sort) {
+    _sortBy = sort;
+    notifyListeners();
+  }
+
+  void setShowOnlineOnly(bool value) {
+    _showOnlineOnly = value;
+    notifyListeners();
+  }
+
   Future<void> loadAllData() async {
     _isLoading = true;
     notifyListeners();
@@ -30,7 +59,7 @@ class AdminService extends ChangeNotifier {
         final usersData = usersSnapshot.value as Map<dynamic, dynamic>;
         final usersList = <String>[];
         final onlineStatus = <String, bool>{};
-        
+
         for (var entry in usersData.entries) {
           final username = entry.key as String;
           final userData = entry.value as Map<dynamic, dynamic>?;
@@ -39,7 +68,7 @@ class AdminService extends ChangeNotifier {
             onlineStatus[username] = true;
           }
         }
-        
+
         _users = usersList;
         _userOnlineStatus = onlineStatus;
       }
@@ -51,31 +80,36 @@ class AdminService extends ChangeNotifier {
     try {
       final conversationsSnapshot = await _conversationsRef.get();
       if (conversationsSnapshot.exists) {
-        final conversationsData = conversationsSnapshot.value as Map<dynamic, dynamic>;
+        final conversationsData =
+            conversationsSnapshot.value as Map<dynamic, dynamic>;
         final allMessages = <String, List<Message>>{};
-        
+
         for (var conversationEntry in conversationsData.entries) {
           final conversationId = conversationEntry.key as String;
-          final conversationData = conversationEntry.value as Map<dynamic, dynamic>?;
-          
-          if (conversationData != null && conversationData['messages'] != null) {
-            final messagesData = conversationData['messages'] as Map<dynamic, dynamic>;
+          final conversationData =
+              conversationEntry.value as Map<dynamic, dynamic>?;
+
+          if (conversationData != null &&
+              conversationData['messages'] != null) {
+            final messagesData =
+                conversationData['messages'] as Map<dynamic, dynamic>;
             final messages = <Message>[];
-            
+
             for (var messageEntry in messagesData.entries) {
-              final messageData = Map<String, dynamic>.from(messageEntry.value as Map);
+              final messageData =
+                  Map<String, dynamic>.from(messageEntry.value as Map);
               messageData['id'] = messageEntry.key;
               messageData['conversationId'] = conversationId;
               final message = Message.fromJson(messageData);
               messages.add(message);
             }
-            
+
             // Sort by timestamp
             messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
             allMessages[conversationId] = messages;
           }
         }
-        
+
         _allMessages = allMessages;
         _isLoading = false;
         notifyListeners();
@@ -95,7 +129,7 @@ class AdminService extends ChangeNotifier {
         final data = event.snapshot.value as Map<dynamic, dynamic>;
         final onlineStatus = <String, bool>{};
         final usersList = <String>[];
-        
+
         for (var entry in data.entries) {
           final username = entry.key as String;
           final userData = entry.value as Map<dynamic, dynamic>?;
@@ -104,32 +138,37 @@ class AdminService extends ChangeNotifier {
             onlineStatus[username] = true;
           }
         }
-        
+
         _users = usersList;
         _userOnlineStatus = onlineStatus;
         notifyListeners();
       }
     });
 
-    _conversationsSubscription = _conversationsRef.onChildChanged.listen((event) {
+    _conversationsSubscription =
+        _conversationsRef.onChildChanged.listen((event) {
       if (event.snapshot.value != null) {
         final conversationId = event.snapshot.key;
-        final conversationData = event.snapshot.value as Map<dynamic, dynamic>?;
-        
-        if (conversationData != null && conversationData['messages'] != null) {
-          final messagesData = conversationData['messages'] as Map<dynamic, dynamic>;
+        final conversationData =
+            event.snapshot.value as Map<dynamic, dynamic>?;
+
+        if (conversationData != null &&
+            conversationData['messages'] != null) {
+          final messagesData =
+              conversationData['messages'] as Map<dynamic, dynamic>;
           final messages = <Message>[];
-          
+
           for (var messageEntry in messagesData.entries) {
-            final messageData = Map<String, dynamic>.from(messageEntry.value as Map);
+            final messageData =
+                Map<String, dynamic>.from(messageEntry.value as Map);
             messageData['id'] = messageEntry.key;
             messageData['conversationId'] = conversationId;
             final message = Message.fromJson(messageData);
             messages.add(message);
           }
-          
+
           messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-          
+
           _allMessages[conversationId!] = messages;
           notifyListeners();
         }
@@ -143,19 +182,149 @@ class AdminService extends ChangeNotifier {
       final conversationId = entry.key;
       return conversationId.contains(username);
     }).toList();
-    
+
     // Get all messages from this user's conversations
     final userMessages = <Message>[];
     for (var conversation in userConversations) {
       userMessages.addAll(conversation.value);
     }
     userMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    
+
     return userMessages;
   }
 
   List<String> getFilteredUsers() {
-    return _users.where((u) => u.toLowerCase() != 'adminrinshid').toList();
+    var filtered = _users.where((u) => u.toLowerCase() != 'adminrinshid').toList();
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((u) => u.toLowerCase().contains(_searchQuery))
+          .toList();
+    }
+
+    // Apply online filter
+    if (_showOnlineOnly) {
+      filtered = filtered
+          .where((u) => _userOnlineStatus[u] == true)
+          .toList();
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) {
+      switch (_sortBy) {
+        case 'activity':
+          final aMessages = getUserMessages(a).length;
+          final bMessages = getUserMessages(b).length;
+          return bMessages.compareTo(aMessages);
+        case 'messages':
+          final aMessages = getUserMessages(a).length;
+          final bMessages = getUserMessages(b).length;
+          return bMessages.compareTo(aMessages);
+        case 'name':
+        default:
+          return a.toLowerCase().compareTo(b.toLowerCase());
+      }
+    });
+
+    return filtered;
+  }
+
+  // Get overall statistics
+  Map<String, dynamic> getOverallStatistics() {
+    final totalUsers = _users.length;
+    final onlineUsers = _userOnlineStatus.values.where((v) => v == true).length;
+    final totalMessages = _allMessages.values
+        .fold<int>(0, (sum, messages) => sum + messages.length);
+    final totalConversations = _allMessages.length;
+
+    // Get most active users
+    final userMessageCounts = <String, int>{};
+    for (var user in _users) {
+      if (user.toLowerCase() != 'adminrinshid') {
+        userMessageCounts[user] = getUserMessages(user).length;
+      }
+    }
+    final sortedUsers = userMessageCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topUsers = sortedUsers.take(5).map((e) => {
+          'username': e.key,
+          'messageCount': e.value,
+        }).toList();
+
+    return {
+      'totalUsers': totalUsers,
+      'onlineUsers': onlineUsers,
+      'offlineUsers': totalUsers - onlineUsers,
+      'totalMessages': totalMessages,
+      'totalConversations': totalConversations,
+      'topUsers': topUsers,
+    };
+  }
+
+  // Get user Firestore data (username, email, password, createdAt)
+  Future<Map<String, dynamic>?> getUserFirestoreData(String username) async {
+    log('Getting user Firestore data for username: $username',name: 'getUserFirestoreData');
+    try {
+      // Try exact username match first
+      log( 'Getting user Firestore data for username: $username',name: 'getUserFirestoreData');
+      var querySnapshot = await FirebaseFirestore.instance
+          .collection('userss__id')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+log(' Query snapshot: ${querySnapshot.docs.length}',name: 'getUserFirestoreData');
+log('Query snapshot docs: ${querySnapshot.docs.first.data()}',name: 'getUserFirestoreData');
+      // If not found, try lowercase match
+      if (querySnapshot.docs.isEmpty) {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('userss__id')
+            .where('username', isEqualTo: username.toLowerCase())
+            .limit(1)
+            .get();
+      }else{
+        log('User found in Firestore: $username',name: 'getUserFirestoreData');
+      }
+
+      // If still not found, search all docs and do case-insensitive comparison
+      if (querySnapshot.docs.isEmpty) {
+        final allDocs = await FirebaseFirestore.instance
+            .collection('userss__id')
+            .get();
+
+        for (var doc in allDocs.docs) {
+          final data = doc.data();
+          final storedUsername = data['username']?.toString() ?? '';
+          log('Stored Username: $storedUsername',name: 'getUserFirestoreData');
+          if (storedUsername.toLowerCase() == username.toLowerCase()) {
+            return {
+              'username': data['username'] ?? username,
+              'email': data['email'] ?? '',
+              'password': data['pass'] ?? '',
+              'createdAt': data['createdAt'],
+              'createdAtLocal': data['createdAtLocal'] ?? '',
+              'uid': doc.id,
+            };
+          }
+        }
+        log('User not found in Firestore: $username',name: 'getUserFirestoreData');
+        return null;
+      }
+
+      final doc = querySnapshot.docs.first;
+      final data = doc.data();
+      return {
+        'username': data['username'] ?? username,
+        'email': data['email'] ?? '',
+        'password': data['pass'] ?? '',
+        'createdAt': data['createdAt'],
+        'createdAtLocal': data['createdAtLocal'] ?? '',
+        'uid': doc.id,
+      };
+    } catch (e) {
+      debugPrint('Error fetching user Firestore data: $e');
+      return null;
+    }
   }
 
   // Get user statistics
@@ -163,7 +332,7 @@ class AdminService extends ChangeNotifier {
     try {
       final userRef = _usersRef.child(username);
       final userSnapshot = await userRef.get();
-      
+
       Map<String, dynamic> stats = {
         'totalMessages': 0,
         'peopleMessaged': <String>{},
@@ -177,24 +346,27 @@ class AdminService extends ChangeNotifier {
         final userData = userSnapshot.value as Map<dynamic, dynamic>?;
         if (userData != null) {
           stats['isOnline'] = userData['online'] == true;
-          
+
           // Get lastSeen
           if (userData['lastSeen'] != null) {
             final lastSeenTimestamp = userData['lastSeen'];
             if (lastSeenTimestamp is int) {
-              stats['lastSeen'] = DateTime.fromMillisecondsSinceEpoch(lastSeenTimestamp);
+              stats['lastSeen'] =
+                  DateTime.fromMillisecondsSinceEpoch(lastSeenTimestamp);
             }
           }
-          
+
           // Get login times history
           if (userData['loginTimes'] != null) {
-            final loginTimes = userData['loginTimes'] as Map<dynamic, dynamic>?;
+            final loginTimes =
+                userData['loginTimes'] as Map<dynamic, dynamic>?;
             if (loginTimes != null) {
               final loginList = <DateTime>[];
               for (var entry in loginTimes.entries) {
                 final timestamp = entry.value;
                 if (timestamp is int) {
-                  loginList.add(DateTime.fromMillisecondsSinceEpoch(timestamp));
+                  loginList.add(
+                      DateTime.fromMillisecondsSinceEpoch(timestamp));
                 }
               }
               loginList.sort((a, b) => b.compareTo(a)); // Most recent first
@@ -207,7 +379,7 @@ class AdminService extends ChangeNotifier {
       // Count messages and people messaged
       final userMessages = getUserMessages(username);
       stats['totalMessages'] = userMessages.length;
-      
+
       final peopleMessaged = <String>{};
       for (var message in userMessages) {
         if (message.recipient != null && message.recipient != username) {
@@ -217,7 +389,8 @@ class AdminService extends ChangeNotifier {
         if (message.conversationId != null) {
           final conversationId = message.conversationId!;
           if (conversationId.startsWith('chat_')) {
-            final withoutPrefix = conversationId.replaceFirst('chat_', '');
+            final withoutPrefix =
+                conversationId.replaceFirst('chat_', '');
             final parts = withoutPrefix.split('_');
             if (parts.length >= 2) {
               final user1 = parts[0];
@@ -250,47 +423,56 @@ class AdminService extends ChangeNotifier {
   Future<void> editUser(String oldUsername, String newUsername) async {
     try {
       if (oldUsername == newUsername) return;
-      
+
       // Get old user data
       final oldUserRef = _usersRef.child(oldUsername);
       final oldUserSnapshot = await oldUserRef.get();
-      
+
       if (!oldUserSnapshot.exists) {
         throw Exception('User not found');
       }
-      
+
       final oldUserData = oldUserSnapshot.value as Map<dynamic, dynamic>;
-      
+
       // Create new user with same data
       final newUserRef = _usersRef.child(newUsername);
       await newUserRef.set(oldUserData);
-      
+
       // Update all conversations that reference this user
       final conversationsSnapshot = await _conversationsRef.get();
       if (conversationsSnapshot.exists) {
-        final conversations = conversationsSnapshot.value as Map<dynamic, dynamic>;
+        final conversations =
+            conversationsSnapshot.value as Map<dynamic, dynamic>;
         for (var entry in conversations.entries) {
           final conversationId = entry.key as String;
           if (conversationId.contains(oldUsername)) {
             // Create new conversation ID
-            final withoutPrefix = conversationId.replaceFirst('chat_', '');
+            final withoutPrefix =
+                conversationId.replaceFirst('chat_', '');
             final parts = withoutPrefix.split('_');
             if (parts.length >= 2) {
-              final user1 = parts[0] == oldUsername ? newUsername : parts[0];
+              final user1 =
+                  parts[0] == oldUsername ? newUsername : parts[0];
               final user2 = parts.sublist(1).join('_');
-              final updatedUser2 = user2 == oldUsername ? newUsername : user2;
-              
+              final updatedUser2 =
+                  user2 == oldUsername ? newUsername : user2;
+
               final sorted = [user1, updatedUser2]..sort();
-              final newConversationId = 'chat_${sorted[0]}_${sorted[1]}';
-              
+              final newConversationId =
+                  'chat_${sorted[0]}_${sorted[1]}';
+
               // Update messages in conversation
-              final conversationData = entry.value as Map<dynamic, dynamic>?;
-              if (conversationData != null && conversationData['messages'] != null) {
-                final messages = conversationData['messages'] as Map<dynamic, dynamic>;
+              final conversationData =
+                  entry.value as Map<dynamic, dynamic>?;
+              if (conversationData != null &&
+                  conversationData['messages'] != null) {
+                final messages =
+                    conversationData['messages'] as Map<dynamic, dynamic>;
                 final updatedMessages = <String, dynamic>{};
-                
+
                 for (var msgEntry in messages.entries) {
-                  final msgData = Map<String, dynamic>.from(msgEntry.value as Map);
+                  final msgData =
+                      Map<String, dynamic>.from(msgEntry.value as Map);
                   if (msgData['username'] == oldUsername) {
                     msgData['username'] = newUsername;
                   }
@@ -299,12 +481,12 @@ class AdminService extends ChangeNotifier {
                   }
                   updatedMessages[msgEntry.key] = msgData;
                 }
-                
+
                 // Create new conversation
-                await _conversationsRef.child(newConversationId).set({
-                  'messages': updatedMessages,
-                });
-                
+                await _conversationsRef
+                    .child(newConversationId)
+                    .set({'messages': updatedMessages});
+
                 // Delete old conversation if different ID
                 if (conversationId != newConversationId) {
                   await _conversationsRef.child(conversationId).remove();
@@ -314,10 +496,10 @@ class AdminService extends ChangeNotifier {
           }
         }
       }
-      
+
       // Delete old user
       await oldUserRef.remove();
-      
+
       // Reload data
       await loadAllData();
     } catch (e) {
@@ -331,25 +513,26 @@ class AdminService extends ChangeNotifier {
     try {
       // Delete user from users
       await _usersRef.child(username).remove();
-      
+
       // Delete all conversations involving this user
       final conversationsSnapshot = await _conversationsRef.get();
       if (conversationsSnapshot.exists) {
-        final conversations = conversationsSnapshot.value as Map<dynamic, dynamic>;
+        final conversations =
+            conversationsSnapshot.value as Map<dynamic, dynamic>;
         final conversationsToDelete = <String>[];
-        
+
         for (var entry in conversations.entries) {
           final conversationId = entry.key as String;
           if (conversationId.contains(username)) {
             conversationsToDelete.add(conversationId);
           }
         }
-        
+
         for (var conversationId in conversationsToDelete) {
           await _conversationsRef.child(conversationId).remove();
         }
       }
-      
+
       // Reload data
       await loadAllData();
     } catch (e) {
@@ -367,8 +550,58 @@ class AdminService extends ChangeNotifier {
         'forceLogout': true, // Flag to force logout from device
       });
       debugPrint('User logged out: $username');
+      await loadAllData();
     } catch (e) {
       debugPrint('Error logging out user: $e');
+      rethrow;
+    }
+  }
+
+  // Ban/Suspend user
+  Future<void> banUser(String username, {bool banned = true}) async {
+    try {
+      await _usersRef.child(username).update({
+        'banned': banned,
+        'bannedAt': banned ? ServerValue.timestamp : null,
+        'forceLogout': banned, // Force logout if banned
+        'online': banned ? false : null,
+      });
+      debugPrint('User ${banned ? 'banned' : 'unbanned'}: $username');
+      await loadAllData();
+    } catch (e) {
+      debugPrint('Error ${banned ? 'banning' : 'unbanning'} user: $e');
+      rethrow;
+    }
+  }
+
+  // Check if user is banned
+  Future<bool> isUserBanned(String username) async {
+    try {
+      final userRef = _usersRef.child(username);
+      final snapshot = await userRef.get();
+      if (snapshot.exists) {
+        final userData = snapshot.value as Map<dynamic, dynamic>?;
+        return userData?['banned'] == true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error checking ban status: $e');
+      return false;
+    }
+  }
+
+  // Delete message
+  Future<void> deleteMessage(String conversationId, String messageId) async {
+    try {
+      final messageRef = _conversationsRef
+          .child(conversationId)
+          .child('messages')
+          .child(messageId);
+      await messageRef.remove();
+      debugPrint('Message deleted: $messageId from conversation: $conversationId');
+      await loadAllData();
+    } catch (e) {
+      debugPrint('Error deleting message: $e');
       rethrow;
     }
   }
@@ -378,11 +611,15 @@ class AdminService extends ChangeNotifier {
     return 'chat_${sorted[0]}_${sorted[1]}';
   }
 
-  Future<void> sendReply(String username, String text, String? replyToMessageId) async {
+  Future<void> sendReply(
+    String username,
+    String text,
+    String? replyToMessageId,
+  ) async {
     try {
       // Generate conversation ID between admin and the user
       final conversationId = _getConversationId('adminrinshid', username);
-      
+
       final message = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         username: 'adminrinshid',
@@ -394,13 +631,14 @@ class AdminService extends ChangeNotifier {
         replyTo: replyToMessageId,
       );
 
-      final conversationRef = _conversationsRef
-          .child(conversationId)
-          .child('messages');
-      
+      final conversationRef =
+          _conversationsRef.child(conversationId).child('messages');
+
       final pushRef = conversationRef.push();
       await pushRef.set(message.toJson());
-      debugPrint('Reply sent successfully. Conversation: $conversationId, Message ID: ${pushRef.key}');
+      debugPrint(
+        'Reply sent successfully. Conversation: $conversationId, Message ID: ${pushRef.key}',
+      );
     } catch (e) {
       debugPrint('Error sending reply: $e');
       rethrow;

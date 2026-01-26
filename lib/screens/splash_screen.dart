@@ -1,11 +1,12 @@
+import 'package:chatapp/user_flow/screens/user_list_screen.dart';
+import 'package:chatapp/user_flow/screens/username_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../services/firebase_chat_service.dart';
-import 'username_screen.dart';
-import 'user_list_screen.dart';
+
 import 'admin_screen.dart';
 
 class SplashScreen extends StatefulWidget {

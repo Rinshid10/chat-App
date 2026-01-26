@@ -1,10 +1,10 @@
+import 'package:chatapp/admin_flow/screens/admin_user_messages_screen.dart';
+import 'package:chatapp/admin_flow/screens/user_activity_screen.dart';
+import 'package:chatapp/admin_flow/services/admin_service.dart';
+import 'package:chatapp/user_flow/screens/username_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/admin_service.dart';
 import '../services/firebase_chat_service.dart';
-import 'admin_user_messages_screen.dart';
-import 'user_activity_screen.dart';
-import 'username_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});

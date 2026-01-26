@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/firebase_chat_service.dart';
-import 'user_list_screen.dart';
-import 'admin_screen.dart';
+
+import 'package:chatapp/services/firebase_chat_service.dart';
+import 'package:chatapp/user_flow/screens/user_list_screen.dart';
+import 'package:chatapp/admin_flow/screens/admin_screen.dart';
 
 class UsernameScreen extends StatefulWidget {
   const UsernameScreen({super.key});
@@ -48,10 +49,12 @@ class _UsernameScreenState extends State<UsernameScreen>
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
     _pulseAnim = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
@@ -70,7 +73,6 @@ class _UsernameScreenState extends State<UsernameScreen>
       final chatService = context.read<FirebaseChatService>();
       chatService.join(username);
 
-      // Check if admin user
       if (username.toLowerCase() == 'adminrinshid') {
         Navigator.pushReplacement(
           context,
@@ -84,10 +86,12 @@ class _UsernameScreenState extends State<UsernameScreen>
                   position: Tween<Offset>(
                     begin: const Offset(0.1, 0),
                     end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOut,
-                  )),
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    ),
+                  ),
                   child: child,
                 ),
               );
@@ -107,10 +111,12 @@ class _UsernameScreenState extends State<UsernameScreen>
                   position: Tween<Offset>(
                     begin: const Offset(0.1, 0),
                     end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOut,
-                  )),
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    ),
+                  ),
                   child: child,
                 ),
               );
@@ -156,7 +162,6 @@ class _UsernameScreenState extends State<UsernameScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Animated Logo
                       ScaleTransition(
                         scale: _pulseAnim,
                         child: Container(
@@ -169,7 +174,8 @@ class _UsernameScreenState extends State<UsernameScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF00d9ff).withOpacity(0.5),
+                                color:
+                                    const Color(0xFF00d9ff).withOpacity(0.5),
                                 blurRadius: 30,
                                 spreadRadius: 5,
                               ),
@@ -183,7 +189,6 @@ class _UsernameScreenState extends State<UsernameScreen>
                         ),
                       ),
                       const SizedBox(height: 40),
-                      // Title
                       ShaderMask(
                         shaderCallback: (bounds) => const LinearGradient(
                           colors: [Color(0xFF00d9ff), Color(0xFF00ff88)],
@@ -208,14 +213,13 @@ class _UsernameScreenState extends State<UsernameScreen>
                         ),
                       ),
                       const SizedBox(height: 50),
-                      // Form
                       Form(
                         key: _formKey,
                         child: Container(
-                          constraints: const BoxConstraints(maxWidth: 400),
+                          constraints:
+                              const BoxConstraints(maxWidth: 400),
                           child: Column(
                             children: [
-                              // Username field
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
@@ -238,17 +242,20 @@ class _UsernameScreenState extends State<UsernameScreen>
                                   decoration: InputDecoration(
                                     hintText: 'Enter your name',
                                     hintStyle: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
+                                      color:
+                                          Colors.white.withOpacity(0.4),
                                     ),
                                     prefixIcon: Icon(
                                       Icons.person_outline_rounded,
                                       color: Colors.white.withOpacity(0.5),
                                     ),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.all(20),
+                                    contentPadding:
+                                        const EdgeInsets.all(20),
                                   ),
                                   validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
+                                    if (value == null ||
+                                        value.trim().isEmpty) {
                                       return 'Please enter your name';
                                     }
                                     return null;
@@ -257,14 +264,15 @@ class _UsernameScreenState extends State<UsernameScreen>
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              // Join button
                               SizedBox(
                                 width: double.infinity,
                                 height: 56,
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
+                                  duration:
+                                      const Duration(milliseconds: 300),
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius:
+                                        BorderRadius.circular(16),
                                     gradient: const LinearGradient(
                                       colors: [
                                         Color(0xFF00d9ff),
@@ -273,27 +281,32 @@ class _UsernameScreenState extends State<UsernameScreen>
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF00d9ff)
-                                            .withOpacity(0.4),
+                                        color:
+                                            const Color(0xFF00d9ff)
+                                                .withOpacity(0.4),
                                         blurRadius: 20,
                                         offset: const Offset(0, 8),
                                       ),
                                     ],
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: _isLoading ? null : _joinChat,
+                                    onPressed:
+                                        _isLoading ? null : _joinChat,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
+                                      backgroundColor:
+                                          Colors.transparent,
                                       shadowColor: Colors.transparent,
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                        borderRadius:
+                                            BorderRadius.circular(16),
                                       ),
                                     ),
                                     child: _isLoading
                                         ? const SizedBox(
                                             width: 24,
                                             height: 24,
-                                            child: CircularProgressIndicator(
+                                            child:
+                                                CircularProgressIndicator(
                                               color: Colors.white,
                                               strokeWidth: 2,
                                             ),
@@ -307,83 +320,19 @@ class _UsernameScreenState extends State<UsernameScreen>
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
+                                                  fontWeight:
+                                                      FontWeight.w600,
                                                 ),
                                               ),
                                               SizedBox(width: 8),
                                               Icon(
-                                                Icons.arrow_forward_rounded,
+                                                Icons
+                                                    .arrow_forward_rounded,
                                                 color: Colors.white,
                                               ),
                                             ],
                                           ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      // Connection status
-                      Consumer<FirebaseChatService>(
-                        builder: (context, socket, _) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: socket.isConnected
-                                ? const Color(0xFF00ff88).withOpacity(0.2)
-                                : Colors.red.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: socket.isConnected
-                                  ? const Color(0xFF00ff88).withOpacity(0.5)
-                                  : Colors.red.withOpacity(0.5),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TweenAnimationBuilder<double>(
-                                tween: Tween(begin: 0.5, end: 1.0),
-                                duration: const Duration(milliseconds: 800),
-                                builder: (_, value, child) => Opacity(
-                                  opacity: value,
-                                  child: child,
-                                ),
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: socket.isConnected
-                                        ? const Color(0xFF00ff88)
-                                        : Colors.red,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: socket.isConnected
-                                            ? const Color(0xFF00ff88)
-                                            : Colors.red,
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                socket.isConnected
-                                    ? 'Connected'
-                                    : 'Connecting...',
-                                style: TextStyle(
-                                  color: socket.isConnected
-                                      ? const Color(0xFF00ff88)
-                                      : Colors.red,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -401,3 +350,4 @@ class _UsernameScreenState extends State<UsernameScreen>
     );
   }
 }
+

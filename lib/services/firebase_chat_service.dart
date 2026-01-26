@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/message.dart';
@@ -129,10 +130,10 @@ class FirebaseChatService extends ChangeNotifier {
                 // Join remaining parts in case username has underscore (unlikely but possible)
                 final user2 = parts.sublist(1).join('_');
                 
-                // Add the other user (not the current user)
-                if (user1 == _username && user2 != _username) {
+                // Add the other user (not the current user and not admin)
+                if (user1 == _username && user2 != _username && user2 != 'adminrinshid') {
                   usersWithMessages.add(user2);
-                } else if (user2 == _username && user1 != _username) {
+                } else if (user2 == _username && user1 != _username && user1 != 'adminrinshid') {
                   usersWithMessages.add(user1);
                 }
               }
@@ -196,8 +197,10 @@ class FirebaseChatService extends ChangeNotifier {
       if (data != null) {
         for (var entry in data.entries) {
           final username = entry.key as String;
-          // Exclude current user and already added contacts
-          if (username != _username && !contactsSet.contains(username)) {
+          // Exclude current user, admin user, and already added contacts
+          if (username != _username && 
+              username != 'adminrinshid' && 
+              !contactsSet.contains(username)) {
             availableUsers.add(username);
           }
         }
@@ -308,29 +311,42 @@ class FirebaseChatService extends ChangeNotifier {
   Future<void> join(String username) async {
     _username = username;
     final userRef = _usersRef.child(username);
-    
+
     // Get existing user data
     final userSnapshot = await userRef.get();
     Map<dynamic, dynamic> userData = {};
-    
+
     if (userSnapshot.exists) {
       userData = Map<dynamic, dynamic>.from(userSnapshot.value as Map);
     }
-    
+
+    // Attach authenticated identity if available
+    try {
+      final authUser = FirebaseAuth.instance.currentUser;
+      if (authUser != null) {
+        userData['uid'] = authUser.uid;
+        if (authUser.email != null) {
+          userData['email'] = authUser.email;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error attaching auth identity to user data: $e');
+    }
+
     // Add login time to history
     final loginTimes = userData['loginTimes'] as Map<dynamic, dynamic>? ?? {};
     final loginTimeKey = DateTime.now().millisecondsSinceEpoch.toString();
     loginTimes[loginTimeKey] = ServerValue.timestamp;
-    
+
     // Update user data
     userData['online'] = true;
     userData['lastSeen'] = ServerValue.timestamp;
     userData['loginTimes'] = loginTimes;
     userData['forceLogout'] = false; // Clear force logout flag when user logs in
-    
+
     await userRef.set(userData);
-    
-    // Save username to local storage
+
+    // Save username to local storage (for convenience only; auth drives sessions)
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = await prefs.setString('username', username);
@@ -338,7 +354,7 @@ class FirebaseChatService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error saving username: $e');
     }
-    
+
     notifyListeners();
   }
 
