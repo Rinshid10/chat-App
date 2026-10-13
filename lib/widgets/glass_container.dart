@@ -1,6 +1,11 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
+/// Flat surface panel used for headers, sheets and the message input.
+///
+/// It used to blur what is behind it. The minimal theme replaces that with
+/// a solid surface and a hairline border, which is also much cheaper to
+/// render on web. [blurSigma] and [opacity] are kept so existing call sites
+/// compile; they no longer change the appearance.
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final double blurSigma;
@@ -23,44 +28,18 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
-
-    final effectiveOpacity = opacity ?? (isDark ? 0.6 : 0.7);
-    final bgColor = isDark
-        ? colorScheme.surface.withOpacity(effectiveOpacity)
-        : Colors.white.withOpacity(effectiveOpacity);
-
     final effectiveBorderRadius = borderRadius ?? BorderRadius.zero;
-
-    final effectiveBorder = border ??
-        Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.08)
-              : Colors.white.withOpacity(0.3),
-          width: 0.5,
-        );
 
     return Container(
       margin: margin,
-      child: ClipRRect(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
         borderRadius: effectiveBorderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: blurSigma,
-            sigmaY: blurSigma,
-          ),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: effectiveBorderRadius,
-              border: effectiveBorder,
-            ),
-            child: child,
-          ),
-        ),
+        border: border ?? Border.all(color: colorScheme.outline, width: 1),
       ),
+      child: child,
     );
   }
 }

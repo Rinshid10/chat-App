@@ -1,5 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:chatapp/utils/responsive.dart';
 import 'package:chatapp/widgets/glass_container.dart';
+
+/// Shows [builder] as a bottom sheet on phones and as a centered dialog on
+/// desktop-sized windows. The builder receives `isDialog` so the content can
+/// drop the drag handle and round every corner when shown as a dialog.
+Future<T?> showAdaptiveSheet<T>({
+  required BuildContext context,
+  required Widget Function(BuildContext context, bool isDialog) builder,
+  double dialogMaxWidth = 420,
+}) {
+  if (isDesktopLayout(context)) {
+    return showDialog<T>(
+      context: context,
+      barrierColor: Colors.black38,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: dialogMaxWidth),
+          child: builder(context, true),
+        ),
+      ),
+    );
+  }
+  return showModalBottomSheet<T>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) => builder(context, false),
+  );
+}
+
+BorderRadius _sheetRadius(bool isDialog) => isDialog
+    ? BorderRadius.circular(24)
+    : const BorderRadius.vertical(top: Radius.circular(24));
+
+Widget _handleBar(BuildContext context, bool isDialog) {
+  if (isDialog) return const SizedBox.shrink();
+  final colorScheme = Theme.of(context).colorScheme;
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: colorScheme.onSurface.withAlpha(50),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(height: 24),
+    ],
+  );
+}
 
 /// Shows a styled confirmation bottom sheet with customizable actions.
 /// Returns the result of the user's choice.
@@ -14,14 +69,12 @@ Future<T?> showConfirmationSheet<T>({
   bool isDanger = false,
 }) async {
   final colorScheme = Theme.of(context).colorScheme;
-  final effectiveConfirmColor = confirmColor ??
-      (isDanger ? colorScheme.error : colorScheme.primary);
+  final effectiveConfirmColor =
+      confirmColor ?? (isDanger ? colorScheme.error : colorScheme.primary);
 
-  return showModalBottomSheet<T>(
+  return showAdaptiveSheet<T>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (context) => _ConfirmationSheetContent(
+    builder: (context, isDialog) => _ConfirmationSheetContent(
       title: title,
       message: message,
       confirmText: confirmText,
@@ -29,6 +82,7 @@ Future<T?> showConfirmationSheet<T>({
       confirmColor: effectiveConfirmColor,
       icon: icon,
       isDanger: isDanger,
+      isDialog: isDialog,
     ),
   );
 }
@@ -41,6 +95,7 @@ class _ConfirmationSheetContent extends StatelessWidget {
   final Color confirmColor;
   final IconData? icon;
   final bool isDanger;
+  final bool isDialog;
 
   const _ConfirmationSheetContent({
     required this.title,
@@ -50,6 +105,7 @@ class _ConfirmationSheetContent extends StatelessWidget {
     required this.confirmColor,
     this.icon,
     required this.isDanger,
+    required this.isDialog,
   });
 
   @override
@@ -58,7 +114,7 @@ class _ConfirmationSheetContent extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return GlassContainer(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: _sheetRadius(isDialog),
       blurSigma: 20,
       padding: EdgeInsets.zero,
       child: SafeArea(
@@ -67,16 +123,7 @@ class _ConfirmationSheetContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withAlpha(50),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
+              _handleBar(context, isDialog),
 
               // Icon
               if (icon != null) ...[
@@ -87,11 +134,7 @@ class _ConfirmationSheetContent extends StatelessWidget {
                     color: confirmColor.withAlpha(30),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    icon,
-                    size: 32,
-                    color: confirmColor,
-                  ),
+                  child: Icon(icon, size: 32, color: confirmColor),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -174,14 +217,13 @@ Future<T?> showActionSheet<T>({
   String? message,
   required List<ActionSheetItem<T>> actions,
 }) async {
-  return showModalBottomSheet<T>(
+  return showAdaptiveSheet<T>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (context) => _ActionSheetContent<T>(
+    builder: (context, isDialog) => _ActionSheetContent<T>(
       title: title,
       message: message,
       actions: actions,
+      isDialog: isDialog,
     ),
   );
 }
@@ -204,11 +246,13 @@ class _ActionSheetContent<T> extends StatelessWidget {
   final String title;
   final String? message;
   final List<ActionSheetItem<T>> actions;
+  final bool isDialog;
 
   const _ActionSheetContent({
     required this.title,
     this.message,
     required this.actions,
+    required this.isDialog,
   });
 
   @override
@@ -217,7 +261,7 @@ class _ActionSheetContent<T> extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return GlassContainer(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: _sheetRadius(isDialog),
       blurSigma: 20,
       padding: EdgeInsets.zero,
       child: SafeArea(
@@ -226,16 +270,7 @@ class _ActionSheetContent<T> extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withAlpha(50),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
+              _handleBar(context, isDialog),
 
               // Title
               Text(
@@ -260,32 +295,34 @@ class _ActionSheetContent<T> extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Actions
-              ...actions.map((action) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(context, action.value),
-                    icon: action.icon != null
-                        ? Icon(action.icon, size: 20)
-                        : const SizedBox.shrink(),
-                    label: Text(action.label),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: action.isDanger
-                          ? colorScheme.errorContainer
-                          : colorScheme.surfaceContainerHighest,
-                      foregroundColor: action.isDanger
-                          ? colorScheme.error
-                          : colorScheme.onSurface,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              ...actions.map(
+                (action) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context, action.value),
+                      icon: action.icon != null
+                          ? Icon(action.icon, size: 20)
+                          : const SizedBox.shrink(),
+                      label: Text(action.label),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: action.isDanger
+                            ? colorScheme.errorContainer
+                            : colorScheme.surfaceContainerHighest,
+                        foregroundColor: action.isDanger
+                            ? colorScheme.error
+                            : colorScheme.onSurface,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
                       ),
-                      elevation: 0,
                     ),
                   ),
                 ),
-              )),
+              ),
 
               const SizedBox(height: 8),
 
@@ -323,16 +360,16 @@ Future<String?> showInputSheet({
   String confirmText = 'Save',
   int maxLines = 4,
 }) async {
-  return showModalBottomSheet<String>(
+  return showAdaptiveSheet<String>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (context) => _InputSheetContent(
+    dialogMaxWidth: 520,
+    builder: (context, isDialog) => _InputSheetContent(
       title: title,
       initialValue: initialValue,
       hintText: hintText,
       confirmText: confirmText,
       maxLines: maxLines,
+      isDialog: isDialog,
     ),
   );
 }
@@ -343,6 +380,7 @@ class _InputSheetContent extends StatefulWidget {
   final String? hintText;
   final String confirmText;
   final int maxLines;
+  final bool isDialog;
 
   const _InputSheetContent({
     required this.title,
@@ -350,6 +388,7 @@ class _InputSheetContent extends StatefulWidget {
     this.hintText,
     required this.confirmText,
     required this.maxLines,
+    required this.isDialog,
   });
 
   @override
@@ -378,7 +417,7 @@ class _InputSheetContentState extends State<_InputSheetContent> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return GlassContainer(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: _sheetRadius(widget.isDialog),
       blurSigma: 20,
       padding: EdgeInsets.zero,
       child: Padding(
@@ -391,16 +430,7 @@ class _InputSheetContentState extends State<_InputSheetContent> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.onSurface.withAlpha(50),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
+            _handleBar(context, widget.isDialog),
 
             // Title
             Text(

@@ -21,13 +21,13 @@ class AuthService extends ChangeNotifier {
           .collection('userss__id')
           .doc(user.uid)
           .set({
-        'uid': user.uid,
-        'username': username,
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdAtLocal': now.toIso8601String(),
-        'pass': password,
-      }, SetOptions(merge: true));
+            'uid': user.uid,
+            'username': username,
+            'email': email,
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdAtLocal': now.toIso8601String(),
+            'pass': password,
+          }, SetOptions(merge: true));
       debugPrint('User document written to Firestore for uid=${user.uid}');
     } catch (e) {
       debugPrint('Error writing user to Firestore: $e');
@@ -131,6 +131,16 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Emails a password-reset link to [email] via Firebase Auth.
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      debugPrint('FirebaseAuth reset error: ${e.code} - ${e.message}');
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await _firebaseAuth.signOut();
@@ -141,4 +151,3 @@ class AuthService extends ChangeNotifier {
     }
   }
 }
-

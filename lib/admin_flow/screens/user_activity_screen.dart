@@ -6,16 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chatapp/admin_flow/services/admin_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
+import 'package:chatapp/utils/responsive.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 
 class UserActivityScreen extends StatefulWidget {
   final String username;
 
-  const UserActivityScreen({
-    super.key,
-    required this.username,
-  });
+  const UserActivityScreen({super.key, required this.username});
 
   @override
   State<UserActivityScreen> createState() => _UserActivityScreenState();
@@ -43,7 +41,9 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
     setState(() => _isLoading = true);
     final adminService = context.read<AdminService>();
     final stats = await adminService.getUserStatistics(widget.username);
-    final firestoreData = await adminService.getUserFirestoreData(widget.username);
+    final firestoreData = await adminService.getUserFirestoreData(
+      widget.username,
+    );
     setState(() {
       _userStats = stats;
       _userFirestoreData = firestoreData;
@@ -163,7 +163,9 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error ${isBanned ? "unbanning" : "banning"} user: $e'),
+              content: Text(
+                'Error ${isBanned ? "unbanning" : "banning"} user: $e',
+              ),
               backgroundColor: colorScheme.error,
             ),
           );
@@ -178,7 +180,8 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
     final confirm = await showConfirmationSheet<bool>(
       context: context,
       title: 'Delete User',
-      message: 'Are you sure you want to delete "${widget.username}"? This action cannot be undone.',
+      message:
+          'Are you sure you want to delete "${widget.username}"? This action cannot be undone.',
       confirmText: 'Delete',
       icon: Icons.person_remove_rounded,
       isDanger: true,
@@ -318,262 +321,260 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
             ),
             // Content
             Expanded(
-              child: _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: colorScheme.primary,
-                      ),
-                    )
-                  : _userStats == null
-                      ? Center(
-                          child: Text(
-                            'Failed to load user data',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadUserStats,
+              child: MaxWidthBody(
+                child: _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
                           color: colorScheme.primary,
-                          child: ListView(
-                            padding: const EdgeInsets.all(16),
-                            children: [
-                              // User Information Section
-                              if (_userFirestoreData != null) ...[
-                                Text(
-                                  'User Information',
-                                  style: textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                _buildInfoCard(
-                                  context: context,
-                                  icon: Icons.person_rounded,
-                                  title: 'Username',
-                                  value: _userFirestoreData!['username'] ?? widget.username,
-                                ),
-                                const SizedBox(height: 12),
-                                _buildInfoCard(
-                                  context: context,
-                                  icon: Icons.email_rounded,
-                                  title: 'Email',
-                                  value: _userFirestoreData!['email'] ?? 'N/A',
-                                ),
-                                const SizedBox(height: 12),
-                                _buildInfoCard(
-                                  context: context,
-                                  icon: Icons.lock_rounded,
-                                  title: 'Password',
-                                  value: _userFirestoreData!['password'] ?? 'N/A',
-                                ),
-                                const SizedBox(height: 12),
-                                _buildInfoCard(
-                                  context: context,
-                                  icon: Icons.calendar_today_rounded,
-                                  title: 'Registration Date',
-                                  value: _formatRegistrationDate(_userFirestoreData!),
-                                ),
-                                const SizedBox(height: 24),
-                              ],
-
-                              // Statistics Section
+                        ),
+                      )
+                    : _userStats == null
+                    ? Center(
+                        child: Text(
+                          'Failed to load user data',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadUserStats,
+                        color: colorScheme.primary,
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            // User Information Section
+                            if (_userFirestoreData != null) ...[
                               Text(
-                                'Statistics',
+                                'User Information',
                                 style: textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              _buildStatCard(
+                              _buildInfoCard(
                                 context: context,
-                                icon: Icons.message_rounded,
-                                title: 'Total Messages',
-                                value: '${_userStats!['totalMessages']}',
-                              ),
-                              const SizedBox(height: 12),
-                              _buildStatCard(
-                                context: context,
-                                icon: Icons.people_rounded,
-                                title: 'People Messaged',
+                                icon: Icons.person_rounded,
+                                title: 'Username',
                                 value:
-                                    '${(_userStats!['peopleMessaged'] as List).length}',
+                                    _userFirestoreData!['username'] ??
+                                    widget.username,
                               ),
                               const SizedBox(height: 12),
-                              if (_userStats!['lastSeen'] != null)
-                                _buildStatCard(
-                                  context: context,
-                                  icon: Icons.access_time_rounded,
-                                  title: 'Last Seen',
-                                  value: DateFormat('MMM dd, yyyy HH:mm')
-                                      .format(
-                                    _userStats!['lastSeen'] as DateTime,
+                              _buildInfoCard(
+                                context: context,
+                                icon: Icons.email_rounded,
+                                title: 'Email',
+                                value: _userFirestoreData!['email'] ?? 'N/A',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInfoCard(
+                                context: context,
+                                icon: Icons.lock_rounded,
+                                title: 'Password',
+                                value: _userFirestoreData!['password'] ?? 'N/A',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInfoCard(
+                                context: context,
+                                icon: Icons.calendar_today_rounded,
+                                title: 'Registration Date',
+                                value: _formatRegistrationDate(
+                                  _userFirestoreData!,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+
+                            // Statistics Section
+                            Text(
+                              'Statistics',
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildStatCard(
+                              context: context,
+                              icon: Icons.message_rounded,
+                              title: 'Total Messages',
+                              value: '${_userStats!['totalMessages']}',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildStatCard(
+                              context: context,
+                              icon: Icons.people_rounded,
+                              title: 'People Messaged',
+                              value:
+                                  '${(_userStats!['peopleMessaged'] as List).length}',
+                            ),
+                            const SizedBox(height: 12),
+                            if (_userStats!['lastSeen'] != null)
+                              _buildStatCard(
+                                context: context,
+                                icon: Icons.access_time_rounded,
+                                title: 'Last Seen',
+                                value: DateFormat(
+                                  'MMM dd, yyyy HH:mm',
+                                ).format(_userStats!['lastSeen'] as DateTime),
+                              ),
+                            const SizedBox(height: 24),
+
+                            // Login Times Section
+                            Text('Login History', style: textTheme.titleMedium),
+                            const SizedBox(height: 12),
+                            if ((_userStats!['loginTimes'] as List).isEmpty)
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'No login history available',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ),
-                              const SizedBox(height: 24),
-
-                              // Login Times Section
-                              Text('Login History',
-                                  style: textTheme.titleMedium),
-                              const SizedBox(height: 12),
-                              if ((_userStats!['loginTimes'] as List).isEmpty)
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'No login history available',
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
+                              )
+                            else
+                              ...((_userStats!['loginTimes'] as List<DateTime>)
+                                  .take(20)
+                                  .map(
+                                    (loginTime) => Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: colorScheme.outline
+                                              .withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  colorScheme.primaryContainer,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              Icons.login_rounded,
+                                              color: colorScheme
+                                                  .onPrimaryContainer,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  DateFormat(
+                                                    'MMM dd, yyyy',
+                                                  ).format(loginTime),
+                                                  style: textTheme.bodyLarge
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  DateFormat(
+                                                    'HH:mm:ss',
+                                                  ).format(loginTime),
+                                                  style: textTheme.bodySmall,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
-                                )
-                              else
-                                ...((_userStats!['loginTimes']
-                                        as List<DateTime>)
-                                    .take(20)
-                                    .map(
-                                      (loginTime) => Container(
-                                        margin:
-                                            const EdgeInsets.only(bottom: 8),
-                                        padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.surface,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: colorScheme.outline
-                                                .withOpacity(0.5),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme
-                                                    .primaryContainer,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Icon(
-                                                Icons.login_rounded,
-                                                color: colorScheme
-                                                    .onPrimaryContainer,
-                                                size: 20,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    DateFormat(
-                                                            'MMM dd, yyyy')
-                                                        .format(loginTime),
-                                                    style: textTheme.bodyLarge
-                                                        ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    DateFormat('HH:mm:ss')
-                                                        .format(loginTime),
-                                                    style:
-                                                        textTheme.bodySmall,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )),
+                                  )),
 
-                              const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                              // People Messaged Section
-                              Text('People Messaged',
-                                  style: textTheme.titleMedium),
-                              const SizedBox(height: 12),
-                              if ((_userStats!['peopleMessaged'] as List)
-                                  .isEmpty)
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'No conversations yet',
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                            // People Messaged Section
+                            Text(
+                              'People Messaged',
+                              style: textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            if ((_userStats!['peopleMessaged'] as List).isEmpty)
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'No conversations yet',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
                                   ),
-                                )
-                              else
-                                ...((_userStats!['peopleMessaged']
-                                        as List<String>)
-                                    .map(
-                                      (person) => Container(
-                                        margin:
-                                            const EdgeInsets.only(bottom: 8),
-                                        padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.surface,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: colorScheme.outline
-                                                .withOpacity(0.5),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 20,
-                                              backgroundColor:
-                                                  getAvatarColor(person),
-                                              child: Text(
-                                                person[0].toUpperCase(),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Text(
-                                                person,
-                                                style: textTheme.bodyLarge
-                                                    ?.copyWith(
-                                                  fontWeight:
-                                                      FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                ),
+                              )
+                            else
+                              ...((_userStats!['peopleMessaged']
+                                      as List<String>)
+                                  .map(
+                                    (person) => Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: colorScheme.outline
+                                              .withOpacity(0.5),
                                         ),
                                       ),
-                                    )),
-                            ],
-                          ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundColor: getAvatarColor(
+                                              person,
+                                            ),
+                                            child: Text(
+                                              person[0].toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              person,
+                                              style: textTheme.bodyLarge
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )),
+                          ],
                         ),
+                      ),
+              ),
             ),
           ],
         ),
@@ -605,21 +606,14 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
               color: colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: colorScheme.onPrimaryContainer,
-              size: 24,
-            ),
+            child: Icon(icon, color: colorScheme.onPrimaryContainer, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: textTheme.bodySmall,
-                ),
+                Text(title, style: textTheme.bodySmall),
                 const SizedBox(height: 4),
                 Text(
                   value,
@@ -701,7 +695,7 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
           return DateFormat('MMM dd, yyyy HH:mm:ss').format(date);
         }
       }
-      
+
       // Fallback to createdAt (Timestamp)
       if (firestoreData['createdAt'] != null) {
         final timestamp = firestoreData['createdAt'];
@@ -721,7 +715,7 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
         }
         return DateFormat('MMM dd, yyyy HH:mm:ss').format(date);
       }
-      
+
       return 'N/A';
     } catch (e) {
       debugPrint('Error formatting registration date: $e');
@@ -729,4 +723,3 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
     }
   }
 }
-
