@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:chatapp/services/pin_service.dart';
 import 'package:chatapp/services/auth_service.dart';
 import 'package:chatapp/utils/responsive.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 
 /// PIN Lock screen shown when app launches and PIN is enabled.
@@ -299,30 +300,19 @@ class _PinLockScreenState extends State<PinLockScreen>
   }
 
   Widget _buildDigitButton(String digit, ColorScheme colorScheme) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _isVerifying ? null : () => _onDigitPressed(digit),
-        borderRadius: BorderRadius.circular(36),
-        child: Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: colorScheme.outline.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              digit,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onSurface,
-              ),
-            ),
+    return DepthSurface(
+      shape: BoxShape.circle,
+      width: 72,
+      height: 72,
+      level: 2,
+      onTap: _isVerifying ? null : () => _onDigitPressed(digit),
+      child: Center(
+        child: Text(
+          digit,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.onSurface,
           ),
         ),
       ),
@@ -330,21 +320,18 @@ class _PinLockScreenState extends State<PinLockScreen>
   }
 
   Widget _buildBackspaceButton(ColorScheme colorScheme) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _isVerifying ? null : _onBackspacePressed,
-        borderRadius: BorderRadius.circular(36),
-        child: SizedBox(
-          width: 72,
-          height: 72,
-          child: Center(
-            child: Icon(
-              Icons.backspace_outlined,
-              size: 28,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
+    return DepthSurface(
+      shape: BoxShape.circle,
+      width: 72,
+      height: 72,
+      level: 1,
+      color: colorScheme.surfaceContainerHighest,
+      onTap: _isVerifying ? null : _onBackspacePressed,
+      child: Center(
+        child: Icon(
+          Icons.backspace_outlined,
+          size: 28,
+          color: colorScheme.onSurfaceVariant,
         ),
       ),
     );

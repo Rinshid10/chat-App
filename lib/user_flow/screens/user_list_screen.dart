@@ -12,6 +12,7 @@ import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/page_transitions.dart';
 import 'package:chatapp/utils/responsive.dart';
 import 'package:chatapp/widgets/brand_mark.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/user_flow/screens/chat_screen.dart';
@@ -464,12 +465,12 @@ class _UserListScreenState extends State<UserListScreen>
       body: Row(
         children: [
           SizedBox(width: sidebarWidth, child: _buildSidebar(context)),
-          VerticalDivider(width: 1, thickness: 1, color: colorScheme.outline),
+          const DepthEdge(axis: Axis.vertical),
           Expanded(
             child: Column(
               children: [
                 _buildTopBar(context),
-                Divider(height: 1, thickness: 1, color: colorScheme.outline),
+                const DepthEdge(axis: Axis.horizontal),
                 Expanded(
                   child: selected == null
                       ? WelcomePane(
@@ -561,17 +562,27 @@ class _UserListScreenState extends State<UserListScreen>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
-      child: Material(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DepthSurface(
+        level: selected ? 2 : 0,
+        hoverLift: true,
+        onTap: onTap,
         color: selected
-            ? colorScheme.primary.withOpacity(0.16)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
+            ? Color.alphaBlend(
+                colorScheme.primary.withOpacity(0.22),
+                colorScheme.surface,
+              )
+            : colorScheme.surface,
+        rimTint: selected ? colorScheme.primary : null,
+        gradient: selected
+            ? null
+            : const LinearGradient(
+                colors: [Colors.transparent, Colors.transparent],
+              ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: EdgeInsets.zero,
             child: Row(
               children: [
                 Icon(
@@ -808,13 +819,18 @@ class _UserListScreenState extends State<UserListScreen>
     final isSelected = desktop && _selectedUser == username;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Material(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+      child: DepthSurface(
+        level: isSelected ? 2 : 1,
+        hoverLift: true,
+        onTap: () => _openChat(username),
         color: isSelected
-            ? colorScheme.primary.withOpacity(0.12)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
+            ? Color.alphaBlend(
+                colorScheme.primary.withOpacity(0.18),
+                colorScheme.surface,
+              )
+            : null,
+        rimTint: isSelected ? colorScheme.primary : null,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
@@ -881,7 +897,6 @@ class _UserListScreenState extends State<UserListScreen>
                   color: colorScheme.onSurfaceVariant,
                   size: 20,
                 ),
-          onTap: () => _openChat(username),
         ),
       ),
     );

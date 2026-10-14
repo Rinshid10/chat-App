@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:chatapp/widgets/brand_mark.dart';
+import 'package:chatapp/widgets/depth.dart';
 
 /// Desktop landing pane shown in the chat area while no conversation is
-/// selected: logo, greeting and a row of quick actions.
+/// selected: logo, greeting and a row of raised quick-action chips.
 class WelcomePane extends StatelessWidget {
   final String username;
   final VoidCallback onAddContact;
@@ -29,7 +30,7 @@ class WelcomePane extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const BrandMark(size: 64),
+            const BrandMark(size: 72),
             const SizedBox(height: 28),
             Text.rich(
               TextSpan(
@@ -44,6 +45,13 @@ class WelcomePane extends StatelessWidget {
               style: textTheme.headlineLarge?.copyWith(
                 fontSize: 34,
                 fontWeight: FontWeight.w600,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.35),
+                    offset: const Offset(0, 2),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
               textAlign: TextAlign.center,
             ),
@@ -59,8 +67,8 @@ class WelcomePane extends StatelessWidget {
             ),
             const SizedBox(height: 36),
             Wrap(
-              spacing: 14,
-              runSpacing: 14,
+              spacing: 16,
+              runSpacing: 16,
               alignment: WrapAlignment.center,
               children: [
                 _QuickAction(
@@ -108,31 +116,34 @@ class _QuickAction extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Material(
-      color: colorScheme.surface,
-      shape: StadiumBorder(side: BorderSide(color: colorScheme.outline)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 26, 12),
-          child: Row(
+    return DepthSurface(
+      radius: 32,
+      level: 2,
+      hoverLift: true,
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(16, 12, 26, 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DepthSurface(
+            shape: BoxShape.circle,
+            width: 40,
+            height: 40,
+            level: 1,
+            color: colorScheme.surfaceContainerHighest,
+            child: Icon(icon, size: 22, color: colorScheme.primary),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 26, color: colorScheme.onSurface),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(title, style: textTheme.titleSmall),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: textTheme.bodySmall),
-                ],
-              ),
+              Text(title, style: textTheme.titleSmall),
+              const SizedBox(height: 2),
+              Text(subtitle, style: textTheme.bodySmall),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

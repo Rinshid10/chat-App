@@ -7,6 +7,7 @@ import 'package:chatapp/admin_flow/services/admin_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/responsive.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 
@@ -199,9 +200,19 @@ class _AdminUserMessagesScreenState extends State<AdminUserMessagesScreen> {
                                         vertical: 10,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: isFromThisUser
-                                            ? colorScheme.sentBubble
-                                            : colorScheme.receivedBubble,
+                                        gradient: AppDepth.raisedFill(
+                                          colorScheme,
+                                          isFromThisUser
+                                              ? colorScheme.sentBubble
+                                              : colorScheme.receivedBubble,
+                                        ),
+                                        boxShadow: AppDepth.shadows(
+                                          colorScheme,
+                                          level: 1,
+                                          tint: isFromThisUser
+                                              ? colorScheme.sentBubble
+                                              : null,
+                                        ),
                                         borderRadius: BorderRadius.only(
                                           topLeft: const Radius.circular(18),
                                           topRight: const Radius.circular(18),

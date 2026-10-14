@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Flat surface panel used for headers, sheets and the message input.
+import 'package:chatapp/widgets/depth.dart';
+
+/// Raised panel used for headers, sheets and dialogs.
 ///
-/// It used to blur what is behind it. The minimal theme replaces that with
-/// a solid surface and a hairline border, which is also much cheaper to
-/// render on web. [blurSigma] and [opacity] are kept so existing call sites
-/// compile; they no longer change the appearance.
+/// Historically this blurred what was behind it; it now paints a solid
+/// surface with a subtle top-lit gradient and a drop shadow, which gives the
+/// layered-depth look and is far cheaper to render on web. [blurSigma] and
+/// [opacity] are kept so older call sites compile; they no longer change
+/// the appearance.
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final double blurSigma;
@@ -14,6 +17,9 @@ class GlassContainer extends StatelessWidget {
   final BoxBorder? border;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
+
+  /// Shadow strength, 0 (flat) to 3 (floating).
+  final int level;
 
   const GlassContainer({
     super.key,
@@ -24,6 +30,7 @@ class GlassContainer extends StatelessWidget {
     this.border,
     this.padding,
     this.margin,
+    this.level = 2,
   });
 
   @override
@@ -35,9 +42,10 @@ class GlassContainer extends StatelessWidget {
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        gradient: AppDepth.raisedFill(colorScheme, colorScheme.surface),
         borderRadius: effectiveBorderRadius,
         border: border ?? Border.all(color: colorScheme.outline, width: 1),
+        boxShadow: AppDepth.shadows(colorScheme, level: level),
       ),
       child: child,
     );

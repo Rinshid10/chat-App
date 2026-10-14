@@ -72,9 +72,10 @@ void main() {
       expect(p.b, greaterThan(p.g));
     }
 
+    // Cards draw their own depth; Material buttons are raised by the theme.
     expect(light.cardTheme.elevation, 0);
     expect(dark.cardTheme.elevation, 0);
-    expect(light.floatingActionButtonTheme.elevation, 0);
-    expect(dark.floatingActionButtonTheme.elevation, 0);
+    expect(light.floatingActionButtonTheme.elevation, greaterThan(0));
+    expect(dark.floatingActionButtonTheme.elevation, greaterThan(0));
   });
 }

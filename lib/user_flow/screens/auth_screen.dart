@@ -10,6 +10,7 @@ import 'package:chatapp/user_flow/screens/splash_screen.dart';
 import 'package:chatapp/utils/responsive.dart';
 import 'package:chatapp/widgets/brand_mark.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
+import 'package:chatapp/widgets/depth.dart';
 
 /// Login / sign-up panel: brand header, labeled fields, gradient call to
 /// action and a link to switch modes.
@@ -235,7 +236,12 @@ class _AuthScreenState extends State<AuthScreen>
               padding: const EdgeInsets.all(24),
               child: FadeTransition(
                 opacity: _fadeAnim,
-                child: _buildForm(context, desktop: false),
+                child: DepthSurface(
+                  level: 2,
+                  radius: 20,
+                  padding: const EdgeInsets.all(24),
+                  child: _buildForm(context, desktop: false),
+                ),
               ),
             ),
           ),
@@ -277,7 +283,14 @@ class _AuthScreenState extends State<AuthScreen>
                                 ),
                               ),
                         ),
-                        child: _buildForm(context, desktop: true),
+                        child: TiltCard(
+                          child: DepthSurface(
+                            level: 3,
+                            radius: 24,
+                            padding: const EdgeInsets.all(40),
+                            child: _buildForm(context, desktop: true),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -532,7 +545,20 @@ class _Field extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          child,
+          // Pressed-in well around the field; the field itself stays unfilled.
+          DepthSurface(
+            inset: true,
+            radius: AppTheme.controlRadius,
+            color: colorScheme.surfaceContainerHighest,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                inputDecorationTheme: Theme.of(
+                  context,
+                ).inputDecorationTheme.copyWith(filled: false),
+              ),
+              child: child,
+            ),
+          ),
         ],
       ),
     );
@@ -574,55 +600,37 @@ class _GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Opacity(
-      opacity: onPressed == null && !loading ? 0.6 : 1,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppTheme.controlRadius),
-        clipBehavior: Clip.antiAlias,
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: colorScheme.accentGradient),
-            borderRadius: BorderRadius.circular(AppTheme.controlRadius),
-          ),
-          child: InkWell(
-            onTap: onPressed,
-            child: SizedBox(
-              height: 52,
-              child: Center(
-                child: loading
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: colorScheme.onPrimary,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            label,
-                            style: TextStyle(
-                              color: colorScheme.onPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            color: colorScheme.onPrimary,
-                            size: 20,
-                          ),
-                        ],
-                      ),
+    return DepthButton(
+      onPressed: loading ? null : onPressed,
+      height: 54,
+      child: loading
+          ? SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                color: colorScheme.onPrimary,
+                strokeWidth: 2,
               ),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: colorScheme.onPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: colorScheme.onPrimary,
+                  size: 20,
+                ),
+              ],
             ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -779,13 +787,15 @@ class _Feature extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
+        DepthSurface(
           width: 44,
           height: 44,
-          decoration: BoxDecoration(
-            color: colorScheme.primary.withOpacity(0.16),
-            borderRadius: BorderRadius.circular(12),
+          level: 2,
+          color: Color.alphaBlend(
+            colorScheme.primary.withOpacity(0.22),
+            colorScheme.surface,
           ),
+          rimTint: colorScheme.primary,
           child: Icon(icon, size: 22, color: colorScheme.primary),
         ),
         const SizedBox(width: 16),

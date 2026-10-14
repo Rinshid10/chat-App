@@ -7,6 +7,7 @@ import 'package:chatapp/admin_flow/services/admin_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/responsive.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 
@@ -638,21 +639,16 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
+    return DepthSurface(
+      level: 1,
+      radius: 16,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
-      ),
       child: Row(
         children: [
-          Container(
+          DepthSurface(
+            level: 1,
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colorScheme.secondaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            color: colorScheme.secondaryContainer,
             child: Icon(
               icon,
               color: colorScheme.onSecondaryContainer,

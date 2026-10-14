@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:chatapp/widgets/depth.dart';
+
 /// Layout breakpoints shared across the app.
 ///
 /// Below [desktop] the app keeps its phone layout. At or above it the
@@ -40,25 +42,10 @@ class ResponsiveFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isDesktopLayout(context)) return child;
 
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final card = Container(
+    final card = DepthSurface(
+      level: 3,
+      radius: 24,
       padding: desktopPadding,
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colorScheme.outline.withOpacity(isDark ? 0.4 : 0.6),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withOpacity(isDark ? 0.4 : 0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
       child: child,
     );
 

@@ -10,6 +10,7 @@ import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/page_transitions.dart';
 import 'package:chatapp/utils/responsive.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/user_flow/screens/auth_screen.dart';
@@ -461,13 +462,11 @@ class _AdminScreenState extends State<AdminScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
+    return DepthSurface(
+      level: 2,
+      radius: 16,
+      hoverLift: true,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -551,15 +550,10 @@ class _AdminScreenState extends State<AdminScreen>
                           opacity: animValue,
                           child: Transform.translate(
                             offset: Offset(0, 20 * (1 - animValue)),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: colorScheme.outline.withOpacity(0.5),
-                                ),
-                              ),
+                            child: DepthSurface(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              radius: 16,
+                              hoverLift: true,
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -729,15 +723,10 @@ class _AdminScreenState extends State<AdminScreen>
                                   adminService,
                                 );
                               },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: colorScheme.outline.withOpacity(0.5),
-                                  ),
-                                ),
+                              child: DepthSurface(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                radius: 16,
+                                hoverLift: true,
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 16,

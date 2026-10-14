@@ -99,8 +99,8 @@ class AppTheme {
           foregroundColor: t.onPrimary,
           disabledBackgroundColor: t.primary.withOpacity(0.5),
           disabledForegroundColor: t.onPrimary.withOpacity(0.8),
-          elevation: 0,
-          shadowColor: Colors.transparent,
+          elevation: 3,
+          shadowColor: t.primary.withOpacity(0.45),
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(controlRadius),
@@ -134,10 +134,10 @@ class AppTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: t.primary,
         foregroundColor: t.onPrimary,
-        elevation: 0,
-        focusElevation: 0,
-        hoverElevation: 0,
-        highlightElevation: 0,
+        elevation: 6,
+        focusElevation: 6,
+        hoverElevation: 10,
+        highlightElevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -161,7 +161,8 @@ class AppTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: t.surface,
-        elevation: 0,
+        elevation: 16,
+        shadowColor: Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: t.outline),
@@ -173,7 +174,8 @@ class AppTheme {
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: t.surface,
-        elevation: 0,
+        elevation: 16,
+        shadowColor: Colors.black,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
@@ -188,7 +190,8 @@ class AppTheme {
       ),
       drawerTheme: DrawerThemeData(
         backgroundColor: t.surface,
-        elevation: 0,
+        elevation: 16,
+        shadowColor: Colors.black,
         shape: const RoundedRectangleBorder(),
       ),
       snackBarTheme: SnackBarThemeData(

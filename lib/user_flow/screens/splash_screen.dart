@@ -11,6 +11,7 @@ import 'package:chatapp/user_flow/screens/auth_screen.dart';
 import 'package:chatapp/user_flow/screens/user_list_screen.dart';
 import 'package:chatapp/user_flow/screens/pin_lock_screen.dart';
 import 'package:chatapp/admin_flow/screens/admin_screen.dart';
+import 'package:chatapp/widgets/brand_mark.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -160,19 +161,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colorScheme.primary,
-              ),
-              child: Icon(
-                Icons.chat_bubble_rounded,
-                size: 44,
-                color: colorScheme.onPrimary,
-              ),
-            ),
+            const BrandMark(size: 90),
             const SizedBox(height: 24),
             Text(
               'ChatFlow',

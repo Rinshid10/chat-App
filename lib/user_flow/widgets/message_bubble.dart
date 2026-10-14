@@ -10,6 +10,7 @@ import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
+import 'package:chatapp/widgets/depth.dart';
 
 class MessageBubble extends StatefulWidget {
   final Message message;
@@ -274,9 +275,17 @@ class _MessageBubbleState extends State<MessageBubble>
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: widget.isMe
-                                ? colorScheme.sentBubble
-                                : colorScheme.receivedBubble,
+                            gradient: AppDepth.raisedFill(
+                              colorScheme,
+                              widget.isMe
+                                  ? colorScheme.sentBubble
+                                  : colorScheme.receivedBubble,
+                            ),
+                            boxShadow: AppDepth.shadows(
+                              colorScheme,
+                              level: 1,
+                              tint: widget.isMe ? colorScheme.sentBubble : null,
+                            ),
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
                               topRight: const Radius.circular(16),
@@ -285,12 +294,18 @@ class _MessageBubbleState extends State<MessageBubble>
                                 widget.isMe ? 4 : 16,
                               ),
                             ),
-                            border: widget.isMe
-                                ? null
-                                : Border.all(
-                                    color: colorScheme.outline,
-                                    width: 0.5,
-                                  ),
+                            // Lit top edge.
+                            border: Border.all(
+                              color: AppDepth.lighten(
+                                widget.isMe
+                                    ? colorScheme.sentBubble
+                                    : colorScheme.receivedBubble,
+                                colorScheme.brightness == Brightness.dark
+                                    ? 0.14
+                                    : 0.0,
+                              ).withOpacity(0.9),
+                              width: 0.8,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
