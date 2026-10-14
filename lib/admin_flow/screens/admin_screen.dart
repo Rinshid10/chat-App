@@ -9,6 +9,8 @@ import 'package:chatapp/services/firebase_chat_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/page_transitions.dart';
+import 'package:chatapp/utils/responsive.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/user_flow/screens/auth_screen.dart';
@@ -35,9 +37,10 @@ class _AdminScreenState extends State<AdminScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
+    _fadeAnim = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
     _fadeController.forward();
 
     _staggerController = AnimationController(
@@ -89,7 +92,8 @@ class _AdminScreenState extends State<AdminScreen>
     final confirm = await showConfirmationSheet<bool>(
       context: context,
       title: 'Delete User',
-      message: 'Are you sure you want to delete "$username"? This action cannot be undone.',
+      message:
+          'Are you sure you want to delete "$username"? This action cannot be undone.',
       confirmText: 'Delete',
       icon: Icons.person_remove_rounded,
       isDanger: true,
@@ -120,6 +124,56 @@ class _AdminScreenState extends State<AdminScreen>
       }
     }
     return false;
+  }
+
+  /// Desktop replacement for the bottom navigation bar.
+  Widget _buildNavigationRail(ColorScheme colorScheme) {
+    return NavigationRail(
+      selectedIndex: _currentIndex,
+      onDestinationSelected: (index) => setState(() => _currentIndex = index),
+      labelType: NavigationRailLabelType.all,
+      backgroundColor: Colors.transparent,
+      selectedIconTheme: IconThemeData(color: colorScheme.primary),
+      selectedLabelTextStyle: TextStyle(
+        color: colorScheme.primary,
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+      ),
+      unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
+      unselectedLabelTextStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant,
+        fontSize: 12,
+      ),
+      leading: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: colorScheme.primary,
+          child: Icon(
+            Icons.admin_panel_settings_rounded,
+            color: colorScheme.onPrimary,
+            size: 20,
+          ),
+        ),
+      ),
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.chat_bubble_outline_rounded),
+          selectedIcon: Icon(Icons.chat_bubble_rounded),
+          label: Text('Conversations'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.people_outline_rounded),
+          selectedIcon: Icon(Icons.people_rounded),
+          label: Text('Users'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.analytics_outlined),
+          selectedIcon: Icon(Icons.analytics_rounded),
+          label: Text('Statistics'),
+        ),
+      ],
+    );
   }
 
   Widget _buildSearchBar() {
@@ -168,7 +222,9 @@ class _AdminScreenState extends State<AdminScreen>
             children: [
               Expanded(
                 child: FilterChip(
-                  label: Text(adminService.showOnlineOnly ? 'Online Only' : 'All Users'),
+                  label: Text(
+                    adminService.showOnlineOnly ? 'Online Only' : 'All Users',
+                  ),
                   selected: adminService.showOnlineOnly,
                   onSelected: (selected) {
                     adminService.setShowOnlineOnly(selected);
@@ -406,13 +462,11 @@ class _AdminScreenState extends State<AdminScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
+    return DepthSurface(
+      level: 2,
+      radius: 16,
+      hoverLift: true,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -454,8 +508,9 @@ class _AdminScreenState extends State<AdminScreen>
           return Center(
             child: Text(
               'No users yet',
-              style: textTheme.bodyMedium
-                  ?.copyWith(color: colorScheme.onSurfaceVariant),
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           );
         }
@@ -472,8 +527,9 @@ class _AdminScreenState extends State<AdminScreen>
                 child: AnimatedBuilder(
                   animation: _staggerController,
                   builder: (context, _) {
-                    final staggerAnims =
-                        _buildStaggerAnimations(filteredUsers.length);
+                    final staggerAnims = _buildStaggerAnimations(
+                      filteredUsers.length,
+                    );
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: filteredUsers.length,
@@ -482,8 +538,9 @@ class _AdminScreenState extends State<AdminScreen>
                         final isOnline =
                             adminService.userOnlineStatus[username] ?? false;
                         final avatarColor = getAvatarColor(username);
-                        final userMessages =
-                            adminService.getUserMessages(username);
+                        final userMessages = adminService.getUserMessages(
+                          username,
+                        );
 
                         final animValue = index < staggerAnims.length
                             ? staggerAnims[index].value
@@ -493,16 +550,10 @@ class _AdminScreenState extends State<AdminScreen>
                           opacity: animValue,
                           child: Transform.translate(
                             offset: Offset(0, 20 * (1 - animValue)),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color:
-                                      colorScheme.outline.withOpacity(0.5),
-                                ),
-                              ),
+                            child: DepthSurface(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              radius: 16,
+                              hoverLift: true,
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -544,8 +595,10 @@ class _AdminScreenState extends State<AdminScreen>
                                     ],
                                   ),
                                 ),
-                                title:
-                                    Text(username, style: textTheme.titleMedium),
+                                title: Text(
+                                  username,
+                                  style: textTheme.titleMedium,
+                                ),
                                 subtitle: Text(
                                   '${isOnline ? "Online" : "Offline"} • ${userMessages.length} messages',
                                   style: TextStyle(
@@ -604,8 +657,9 @@ class _AdminScreenState extends State<AdminScreen>
           return Center(
             child: Text(
               'No users yet',
-              style: textTheme.bodyMedium
-                  ?.copyWith(color: colorScheme.onSurfaceVariant),
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           );
         }
@@ -622,8 +676,9 @@ class _AdminScreenState extends State<AdminScreen>
                 child: AnimatedBuilder(
                   animation: _staggerController,
                   builder: (context, _) {
-                    final staggerAnims =
-                        _buildStaggerAnimations(filteredUsers.length);
+                    final staggerAnims = _buildStaggerAnimations(
+                      filteredUsers.length,
+                    );
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: filteredUsers.length,
@@ -632,8 +687,9 @@ class _AdminScreenState extends State<AdminScreen>
                         final isOnline =
                             adminService.userOnlineStatus[username] ?? false;
                         final avatarColor = getAvatarColor(username);
-                        final userMessages =
-                            adminService.getUserMessages(username);
+                        final userMessages = adminService.getUserMessages(
+                          username,
+                        );
 
                         final animValue = index < staggerAnims.length
                             ? staggerAnims[index].value
@@ -667,16 +723,10 @@ class _AdminScreenState extends State<AdminScreen>
                                   adminService,
                                 );
                               },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color:
-                                        colorScheme.outline.withOpacity(0.5),
-                                  ),
-                                ),
+                              child: DepthSurface(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                radius: 16,
+                                hoverLift: true,
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -718,8 +768,10 @@ class _AdminScreenState extends State<AdminScreen>
                                       ],
                                     ),
                                   ),
-                                  title:
-                                      Text(username, style: textTheme.titleMedium),
+                                  title: Text(
+                                    username,
+                                    style: textTheme.titleMedium,
+                                  ),
                                   subtitle: Text(
                                     '${isOnline ? "Online" : "Offline"} • ${userMessages.length} messages',
                                     style: TextStyle(
@@ -766,122 +818,142 @@ class _AdminScreenState extends State<AdminScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    final desktop = isDesktopLayout(context);
+
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Row(
           children: [
-            // Glass Header
-            FadeTransition(
-              opacity: _fadeAnim,
-              child: GlassContainer(
-                padding: const EdgeInsets.all(20),
-                border: Border(
-                  bottom: BorderSide(
-                    color: colorScheme.outline.withOpacity(0.3),
-                    width: 0.5,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: colorScheme.primary,
-                      child: Icon(
-                        Icons.admin_panel_settings_rounded,
-                        color: colorScheme.onPrimary,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Consumer<AdminService>(
-                        builder: (context, adminService, _) => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Admin Panel',
-                                style: textTheme.titleLarge),
-                            const SizedBox(height: 2),
-                            Text(
-                              _currentIndex == 0
-                                  ? '${adminService.getFilteredUsers().length} users, ${adminService.allMessages.length} conversations'
-                                  : '${adminService.getFilteredUsers().length} users',
-                              style: textTheme.bodySmall,
-                            ),
-                          ],
+            if (desktop) ...[
+              _buildNavigationRail(colorScheme),
+              VerticalDivider(
+                width: 1,
+                thickness: 1,
+                color: colorScheme.outline.withOpacity(0.3),
+              ),
+            ],
+            Expanded(
+              child: Column(
+                children: [
+                  // Glass Header
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: GlassContainer(
+                      padding: const EdgeInsets.all(20),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: colorScheme.outline.withOpacity(0.3),
+                          width: 0.5,
                         ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () async {
-                        final chatService =
-                            context.read<FirebaseChatService>();
-                        final authService =
-                            context.read<AuthService>();
-                        await chatService.logout();
-                        await authService.signOut();
-                        if (mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            FadeScalePageRoute(
-                              page: const AuthScreen(),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: colorScheme.primary,
+                            child: Icon(
+                              Icons.admin_panel_settings_rounded,
+                              color: colorScheme.onPrimary,
+                              size: 22,
                             ),
-                          );
-                        }
-                      },
-                      icon: Icon(
-                        Icons.logout_rounded,
-                        color: colorScheme.onSurfaceVariant,
-                        size: 22,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Consumer<AdminService>(
+                              builder: (context, adminService, _) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Admin Panel',
+                                    style: textTheme.titleLarge,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _currentIndex == 0
+                                        ? '${adminService.getFilteredUsers().length} users, ${adminService.allMessages.length} conversations'
+                                        : '${adminService.getFilteredUsers().length} users',
+                                    style: textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final chatService = context
+                                  .read<FirebaseChatService>();
+                              final authService = context.read<AuthService>();
+                              await chatService.logout();
+                              await authService.signOut();
+                              if (mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  FadeScalePageRoute(page: const AuthScreen()),
+                                );
+                              }
+                            },
+                            icon: Icon(
+                              Icons.logout_rounded,
+                              color: colorScheme.onSurfaceVariant,
+                              size: 22,
+                            ),
+                            tooltip: 'Logout',
+                          ),
+                        ],
                       ),
-                      tooltip: 'Logout',
                     ),
-                  ],
-                ),
-              ),
-            ),
-            // Content
-            Expanded(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  _buildConversationsTab(),
-                  _buildUsersTab(),
-                  _buildStatisticsTab(),
+                  ),
+                  // Content
+                  Expanded(
+                    child: MaxWidthBody(
+                      maxWidth: 1100,
+                      child: IndexedStack(
+                        index: _currentIndex,
+                        sizing: StackFit.expand,
+                        children: [
+                          _buildConversationsTab(),
+                          _buildUsersTab(),
+                          _buildStatisticsTab(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: GlassContainer(
-        child: BottomNavigationBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          selectedItemColor: colorScheme.primary,
-          unselectedItemColor: colorScheme.onSurfaceVariant,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded),
-              activeIcon: Icon(Icons.chat_bubble_rounded),
-              label: 'Conversations',
+      bottomNavigationBar: desktop
+          ? null
+          : GlassContainer(
+              child: BottomNavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                currentIndex: _currentIndex,
+                onTap: (index) => setState(() => _currentIndex = index),
+                selectedItemColor: colorScheme.primary,
+                unselectedItemColor: colorScheme.onSurfaceVariant,
+                type: BottomNavigationBarType.fixed,
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.chat_bubble_outline_rounded),
+                    activeIcon: Icon(Icons.chat_bubble_rounded),
+                    label: 'Conversations',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.people_outline_rounded),
+                    activeIcon: Icon(Icons.people_rounded),
+                    label: 'Users',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.analytics_outlined),
+                    activeIcon: Icon(Icons.analytics_rounded),
+                    label: 'Statistics',
+                  ),
+                ],
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline_rounded),
-              activeIcon: Icon(Icons.people_rounded),
-              label: 'Users',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_outlined),
-              activeIcon: Icon(Icons.analytics_rounded),
-              label: 'Statistics',
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
-

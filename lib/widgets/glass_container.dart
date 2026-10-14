@@ -1,6 +1,14 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import 'package:chatapp/widgets/depth.dart';
+
+/// Raised panel used for headers, sheets and dialogs.
+///
+/// Historically this blurred what was behind it; it now paints a solid
+/// surface with a subtle top-lit gradient and a drop shadow, which gives the
+/// layered-depth look and is far cheaper to render on web. [blurSigma] and
+/// [opacity] are kept so older call sites compile; they no longer change
+/// the appearance.
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final double blurSigma;
@@ -9,6 +17,9 @@ class GlassContainer extends StatelessWidget {
   final BoxBorder? border;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
+
+  /// Shadow strength, 0 (flat) to 3 (floating).
+  final int level;
 
   const GlassContainer({
     super.key,
@@ -19,48 +30,24 @@ class GlassContainer extends StatelessWidget {
     this.border,
     this.padding,
     this.margin,
+    this.level = 2,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
-
-    final effectiveOpacity = opacity ?? (isDark ? 0.6 : 0.7);
-    final bgColor = isDark
-        ? colorScheme.surface.withOpacity(effectiveOpacity)
-        : Colors.white.withOpacity(effectiveOpacity);
-
     final effectiveBorderRadius = borderRadius ?? BorderRadius.zero;
-
-    final effectiveBorder = border ??
-        Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.08)
-              : Colors.white.withOpacity(0.3),
-          width: 0.5,
-        );
 
     return Container(
       margin: margin,
-      child: ClipRRect(
+      padding: padding,
+      decoration: BoxDecoration(
+        gradient: AppDepth.raisedFill(colorScheme, colorScheme.surface),
         borderRadius: effectiveBorderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: blurSigma,
-            sigmaY: blurSigma,
-          ),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: effectiveBorderRadius,
-              border: effectiveBorder,
-            ),
-            child: child,
-          ),
-        ),
+        border: border ?? Border.all(color: colorScheme.outline, width: 1),
+        boxShadow: AppDepth.shadows(colorScheme, level: level),
       ),
+      child: child,
     );
   }
 }

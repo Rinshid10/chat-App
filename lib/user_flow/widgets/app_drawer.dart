@@ -9,6 +9,7 @@ import 'package:chatapp/utils/avatar_utils.dart';
 import 'package:chatapp/utils/page_transitions.dart';
 import 'package:chatapp/user_flow/screens/auth_screen.dart';
 import 'package:chatapp/user_flow/screens/pin_setup_screen.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 
@@ -137,13 +138,17 @@ class _AppDrawerState extends State<AppDrawer> {
                         onPressed: () async {
                           if (enteredPin.length != 4) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('PIN must be 4 digits')),
+                              const SnackBar(
+                                content: Text('PIN must be 4 digits'),
+                              ),
                             );
                             return;
                           }
 
                           final pinService = context.read<PinService>();
-                          final isValid = await pinService.verifyPin(enteredPin);
+                          final isValid = await pinService.verifyPin(
+                            enteredPin,
+                          );
 
                           if (isValid) {
                             Navigator.pop(context, true);
@@ -197,7 +202,8 @@ class _AppDrawerState extends State<AppDrawer> {
     final themeProvider = context.watch<ThemeProvider>();
 
     final user = authService.currentUser;
-    final username = chatService.username ??
+    final username =
+        chatService.username ??
         user?.displayName ??
         user?.email?.split('@').first ??
         'User';
@@ -271,11 +277,9 @@ class _AppDrawerState extends State<AppDrawer> {
             // Theme Toggle Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              child: DepthSurface(
+                level: 1,
+                color: colorScheme.surfaceContainerHighest,
                 child: ListTile(
                   leading: Icon(
                     isDarkMode
@@ -283,10 +287,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         : Icons.light_mode_rounded,
                     color: colorScheme.primary,
                   ),
-                  title: Text(
-                    'Theme',
-                    style: textTheme.titleMedium,
-                  ),
+                  title: Text('Theme', style: textTheme.titleMedium),
                   subtitle: Text(
                     isDarkMode ? 'Dark Mode' : 'Light Mode',
                     style: textTheme.bodySmall?.copyWith(
@@ -312,11 +313,9 @@ class _AppDrawerState extends State<AppDrawer> {
             // App Lock (PIN) Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              child: DepthSurface(
+                level: 1,
+                color: colorScheme.surfaceContainerHighest,
                 child: Column(
                   children: [
                     ListTile(
@@ -324,10 +323,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         Icons.lock_rounded,
                         color: colorScheme.primary,
                       ),
-                      title: Text(
-                        'App Lock',
-                        style: textTheme.titleMedium,
-                      ),
+                      title: Text('App Lock', style: textTheme.titleMedium),
                       subtitle: Text(
                         _isLoadingPin
                             ? 'Loading...'
@@ -347,7 +343,8 @@ class _AppDrawerState extends State<AppDrawer> {
                               onChanged: _handlePinToggle,
                               activeTrackColor: colorScheme.primary,
                               activeThumbColor: colorScheme.onPrimary,
-                              inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                              inactiveTrackColor:
+                                  colorScheme.surfaceContainerHighest,
                               inactiveThumbColor: colorScheme.outline,
                             ),
                     ),
@@ -393,7 +390,8 @@ class _AppDrawerState extends State<AppDrawer> {
                     final shouldLogout = await showConfirmationSheet<bool>(
                       context: context,
                       title: 'Logout',
-                      message: 'Are you sure you want to logout from your account?',
+                      message:
+                          'Are you sure you want to logout from your account?',
                       confirmText: 'Logout',
                       icon: Icons.logout_rounded,
                       isDanger: true,

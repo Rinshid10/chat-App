@@ -5,7 +5,9 @@ import 'package:chatapp/services/call_notification_service.dart';
 import 'package:chatapp/services/firebase_chat_service.dart';
 import 'package:chatapp/user_flow/screens/call_screen.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
+import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
+import 'package:chatapp/widgets/depth.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final String callerUsername;
@@ -122,20 +124,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Avatar with animation
-                  Container(
+                  DepthSurface(
+                    shape: BoxShape.circle,
                     width: 150,
                     height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: avatarColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: avatarColor.withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 10,
-                        ),
-                      ],
-                    ),
+                    level: 3,
+                    color: avatarColor,
+                    shadowTint: avatarColor,
+                    rimTint: avatarColor,
                     child: Center(
                       child: Text(
                         widget.callerUsername[0].toUpperCase(),
@@ -176,52 +172,38 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   // Reject button
-                  Container(
+                  DepthButton(
+                    shape: BoxShape.circle,
                     width: 72,
                     height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colorScheme.error,
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.error.withOpacity(0.3),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      onPressed: _rejectCall,
-                      icon: Icon(
-                        Icons.call_end_rounded,
-                        color: colorScheme.onError,
-                        size: 32,
-                      ),
+                    padding: EdgeInsets.zero,
+                    colors: [
+                      colorScheme.error,
+                      AppDepth.darken(colorScheme.error, 0.25),
+                    ],
+                    onPressed: _rejectCall,
+                    child: Icon(
+                      Icons.call_end_rounded,
+                      color: colorScheme.onError,
+                      size: 32,
                     ),
                   ),
 
                   // Accept button
-                  Container(
+                  DepthButton(
+                    shape: BoxShape.circle,
                     width: 72,
                     height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colorScheme.primary,
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.primary.withOpacity(0.3),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      onPressed: _acceptCall,
-                      icon: Icon(
-                        Icons.call_rounded,
-                        color: colorScheme.onPrimary,
-                        size: 32,
-                      ),
+                    padding: EdgeInsets.zero,
+                    colors: [
+                      colorScheme.onlineGreen,
+                      AppDepth.darken(colorScheme.onlineGreen, 0.25),
+                    ],
+                    onPressed: _acceptCall,
+                    child: Icon(
+                      Icons.call_rounded,
+                      color: colorScheme.onPrimary,
+                      size: 32,
                     ),
                   ),
                 ],

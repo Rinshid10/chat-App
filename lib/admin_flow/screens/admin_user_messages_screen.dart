@@ -6,6 +6,8 @@ import 'package:chatapp/models/message.dart';
 import 'package:chatapp/admin_flow/services/admin_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
+import 'package:chatapp/utils/responsive.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 import 'package:chatapp/widgets/confirmation_sheet.dart';
 
@@ -20,11 +22,11 @@ class AdminUserMessagesScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminUserMessagesScreen> createState() => _AdminUserMessagesScreenState();
+  State<AdminUserMessagesScreen> createState() =>
+      _AdminUserMessagesScreenState();
 }
 
 class _AdminUserMessagesScreenState extends State<AdminUserMessagesScreen> {
-
   Future<void> _deleteMessage(Message message) async {
     final colorScheme = Theme.of(context).colorScheme;
     if (message.conversationId == null) return;
@@ -32,7 +34,8 @@ class _AdminUserMessagesScreenState extends State<AdminUserMessagesScreen> {
     final confirm = await showConfirmationSheet<bool>(
       context: context,
       title: 'Delete Message',
-      message: 'Are you sure you want to delete this message? This action cannot be undone.',
+      message:
+          'Are you sure you want to delete this message? This action cannot be undone.',
       confirmText: 'Delete',
       icon: Icons.delete_outline_rounded,
       isDanger: true,
@@ -41,10 +44,7 @@ class _AdminUserMessagesScreenState extends State<AdminUserMessagesScreen> {
     if (confirm == true) {
       try {
         final adminService = context.read<AdminService>();
-        await adminService.deleteMessage(
-          message.conversationId!,
-          message.id,
-        );
+        await adminService.deleteMessage(message.conversationId!, message.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -130,156 +130,174 @@ class _AdminUserMessagesScreenState extends State<AdminUserMessagesScreen> {
             ),
             // Messages list
             Expanded(
-              child: widget.messages.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            size: 56,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No messages yet',
-                            style: textTheme.titleLarge?.copyWith(
+              child: MaxWidthBody(
+                child: widget.messages.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 56,
                               color: colorScheme.onSurfaceVariant,
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: widget.messages.length,
-                      itemBuilder: (context, index) {
-                        final message = widget.messages[index];
-                        final isFromThisUser = message.username == widget.username;
-                        final msgAvatarColor =
-                            getAvatarColor(message.username);
+                            const SizedBox(height: 16),
+                            Text(
+                              'No messages yet',
+                              style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: widget.messages.length,
+                        itemBuilder: (context, index) {
+                          final message = widget.messages[index];
+                          final isFromThisUser =
+                              message.username == widget.username;
+                          final msgAvatarColor = getAvatarColor(
+                            message.username,
+                          );
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            mainAxisAlignment: isFromThisUser
-                                ? MainAxisAlignment.end
-                                : MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!isFromThisUser) ...[
-                                CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: msgAvatarColor,
-                                  child: Text(
-                                    message.username[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              Flexible(
-                                child: GestureDetector(
-                                  onLongPress: () => _deleteMessage(message),
-                                  child: Container(
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width * 0.7,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 10,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isFromThisUser
-                                          ? colorScheme.sentBubble
-                                          : colorScheme.receivedBubble,
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: const Radius.circular(18),
-                                        topRight: const Radius.circular(18),
-                                        bottomLeft: Radius.circular(
-                                          isFromThisUser ? 18 : 4,
-                                        ),
-                                        bottomRight: Radius.circular(
-                                          isFromThisUser ? 4 : 18,
-                                        ),
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              mainAxisAlignment: isFromThisUser
+                                  ? MainAxisAlignment.end
+                                  : MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (!isFromThisUser) ...[
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: msgAvatarColor,
+                                    child: Text(
+                                      message.username[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (!isFromThisUser)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(bottom: 4),
-                                            child: Text(
-                                              message.username,
-                                              style: TextStyle(
-                                                color: msgAvatarColor,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Flexible(
+                                  child: GestureDetector(
+                                    onLongPress: () => _deleteMessage(message),
+                                    child: Container(
+                                      constraints: BoxConstraints(
+                                        maxWidth:
+                                            (MediaQuery.of(context).size.width *
+                                                    0.7)
+                                                .clamp(0.0, 560.0),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: AppDepth.raisedFill(
+                                          colorScheme,
+                                          isFromThisUser
+                                              ? colorScheme.sentBubble
+                                              : colorScheme.receivedBubble,
+                                        ),
+                                        boxShadow: AppDepth.shadows(
+                                          colorScheme,
+                                          level: 1,
+                                          tint: isFromThisUser
+                                              ? colorScheme.sentBubble
+                                              : null,
+                                        ),
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: const Radius.circular(18),
+                                          topRight: const Radius.circular(18),
+                                          bottomLeft: Radius.circular(
+                                            isFromThisUser ? 18 : 4,
                                           ),
-                                        Text(
-                                          message.text,
-                                          style: TextStyle(
-                                            color: isFromThisUser
-                                                ? colorScheme.onPrimary
-                                                : colorScheme.onSurface,
-                                            fontSize: 15,
-                                            height: 1.4,
+                                          bottomRight: Radius.circular(
+                                            isFromThisUser ? 4 : 18,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              DateFormat('HH:mm')
-                                                  .format(message.timestamp),
-                                              style: TextStyle(
-                                                color: isFromThisUser
-                                                    ? colorScheme.onPrimary
-                                                        .withOpacity(0.7)
-                                                    : colorScheme
-                                                        .onSurfaceVariant,
-                                                fontSize: 11,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (!isFromThisUser)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 4,
+                                              ),
+                                              child: Text(
+                                                message.username,
+                                                style: TextStyle(
+                                                  color: msgAvatarColor,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                               ),
                                             ),
-                                            if (message.isEdited) ...[
-                                              const SizedBox(width: 4),
+                                          Text(
+                                            message.text,
+                                            style: TextStyle(
+                                              color: isFromThisUser
+                                                  ? colorScheme.onPrimary
+                                                  : colorScheme.onSurface,
+                                              fontSize: 15,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
                                               Text(
-                                                'edited',
+                                                DateFormat(
+                                                  'HH:mm',
+                                                ).format(message.timestamp),
                                                 style: TextStyle(
                                                   color: isFromThisUser
                                                       ? colorScheme.onPrimary
-                                                          .withOpacity(0.6)
+                                                            .withOpacity(0.7)
                                                       : colorScheme
-                                                          .onSurfaceVariant,
-                                                  fontSize: 10,
-                                                  fontStyle: FontStyle.italic,
+                                                            .onSurfaceVariant,
+                                                  fontSize: 11,
                                                 ),
                                               ),
+                                              if (message.isEdited) ...[
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'edited',
+                                                  style: TextStyle(
+                                                    color: isFromThisUser
+                                                        ? colorScheme.onPrimary
+                                                              .withOpacity(0.6)
+                                                        : colorScheme
+                                                              .onSurfaceVariant,
+                                                    fontSize: 10,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ],
                                             ],
-                                          ],
-                                        ),
-                                      ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              if (isFromThisUser) const SizedBox(width: 8),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                                if (isFromThisUser) const SizedBox(width: 8),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
             ),
           ],
         ),
@@ -287,4 +305,3 @@ class _AdminUserMessagesScreenState extends State<AdminUserMessagesScreen> {
     );
   }
 }
-

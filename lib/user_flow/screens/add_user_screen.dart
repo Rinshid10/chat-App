@@ -7,6 +7,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:chatapp/services/firebase_chat_service.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
+import 'package:chatapp/widgets/depth.dart';
 import 'package:chatapp/widgets/glass_container.dart';
 
 class AddUserScreen extends StatefulWidget {
@@ -333,21 +334,11 @@ class _AddUserScreenState extends State<AddUserScreen>
                                       child: Transform.translate(
                                         offset: Offset(
                                             0, 20 * (1 - animValue)),
-                                        child: Container(
-                                          margin:
-                                              const EdgeInsets.only(
-                                                  bottom: 8),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.surface,
-                                            borderRadius:
-                                                BorderRadius.circular(
-                                                    16),
-                                            border: Border.all(
-                                              color: colorScheme
-                                                  .outline
-                                                  .withOpacity(0.5),
-                                            ),
-                                          ),
+                                        child: DepthSurface(
+                                          margin: const EdgeInsets.only(
+                                              bottom: 10),
+                                          radius: 16,
+                                          hoverLift: true,
                                           child: ListTile(
                                             contentPadding:
                                                 const EdgeInsets

@@ -2,28 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:chatapp/services/firebase_chat_service.dart';
-import 'package:chatapp/services/call_notification_service.dart';
 import 'package:chatapp/user_flow/widgets/message_bubble.dart';
 import 'package:chatapp/user_flow/widgets/message_input.dart';
-import 'package:chatapp/user_flow/screens/call_screen.dart';
+import 'package:chatapp/user_flow/widgets/voice_call_launcher.dart';
 import 'package:chatapp/widgets/glass_container.dart';
-import 'package:chatapp/widgets/confirmation_sheet.dart';
 import 'package:chatapp/models/message.dart';
 import 'package:chatapp/theme/app_colors.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:chatapp/utils/responsive.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUsername;
 
-  const ChatScreen({super.key, required this.otherUsername});
+  /// True when the chat is rendered inside the desktop split view next to
+  /// the contact list, rather than pushed as its own route. In that mode
+  /// there is no back button, no status-bar inset, and no Hero (the list's
+  /// avatar Hero with the same tag is already on screen).
+  final bool embedded;
+
+  /// False when the surrounding shell already shows the contact's name and
+  /// call button in its own top bar.
+  final bool showHeader;
+
+  const ChatScreen({
+    super.key,
+    required this.otherUsername,
+    this.embedded = false,
+    this.showHeader = true,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen>
-    with TickerProviderStateMixin {
+class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   late AnimationController _headerController;
   late Animation<double> _headerAnim;
@@ -57,90 +69,8 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  Future<void> _showCallConfirmation(BuildContext context) async {
-    final shouldStartCall = await showConfirmationSheet<bool>(
-      context: context,
-      title: 'Start Call',
-      message: 'Do you want to start an audio call with ${widget.otherUsername}?',
-      confirmText: 'Call',
-      icon: Icons.call_rounded,
-    );
-
-    if (shouldStartCall == true && mounted) {
-      await _startCall(context);
-    }
-  }
-
-  Future<void> _startCall(BuildContext context) async {
-    // Request microphone permission
-    final status = await Permission.microphone.request();
-    
-    if (status.isDenied) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Microphone permission is required for voice calls'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-      return;
-    }
-
-    if (status.isPermanentlyDenied) {
-      if (mounted) {
-        final shouldOpenSettings = await showConfirmationSheet<bool>(
-          context: context,
-          title: 'Microphone Permission Required',
-          message: 'Please enable microphone permission in app settings to make voice calls.',
-          confirmText: 'Open Settings',
-          icon: Icons.mic_off_rounded,
-        );
-
-        if (shouldOpenSettings == true) {
-          await openAppSettings();
-        }
-      }
-      return;
-    }
-
-    // Generate unique channel name for this call
-    final channelName = 'test_call';
-    
-    // Send call notification to the other user
-    final callNotificationService = context.read<CallNotificationService>();
-    final chatService = context.read<FirebaseChatService>();
-    
-    try {
-      await callNotificationService.sendCallInvitation(
-        fromUsername: chatService.username ?? '',
-        toUsername: widget.otherUsername,
-        channelName: channelName,
-      );
-
-      // Navigate to call screen
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CallScreen(
-              otherUsername: widget.otherUsername,
-              channelName: channelName,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error starting call: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
+  Future<void> _showCallConfirmation(BuildContext context) =>
+      confirmAndStartCall(context, widget.otherUsername);
 
   @override
   void dispose() {
@@ -154,7 +84,22 @@ class _ChatScreenState extends State<ChatScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final avatarColor = getAvatarColor(widget.otherUsername);
-    final topPadding = MediaQuery.of(context).padding.top;
+    final headerAvatar = CircleAvatar(
+      radius: 20,
+      backgroundColor: avatarColor,
+      child: Text(
+        widget.otherUsername[0].toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    final topPadding = widget.embedded
+        ? 0.0
+        : MediaQuery.of(context).padding.top;
+    final listInset = isDesktopLayout(context) ? 24.0 : 16.0;
 
     return Scaffold(
       body: Stack(
@@ -164,13 +109,12 @@ class _ChatScreenState extends State<ChatScreen>
             child: Column(
               children: [
                 // Space for the glass header
-                SizedBox(height: topPadding + 76),
+                SizedBox(height: widget.showHeader ? topPadding + 76 : 0),
                 // Messages
                 Expanded(
                   child: Consumer<FirebaseChatService>(
                     builder: (context, service, _) {
-                      WidgetsBinding.instance
-                          .addPostFrameCallback((_) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
                         _scrollToBottom();
                       });
 
@@ -187,8 +131,7 @@ class _ChatScreenState extends State<ChatScreen>
                               const SizedBox(height: 16),
                               Text(
                                 'No messages yet',
-                                style:
-                                    textTheme.titleLarge?.copyWith(
+                                style: textTheme.titleLarge?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
@@ -204,17 +147,16 @@ class _ChatScreenState extends State<ChatScreen>
 
                       return ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(
-                          16,
+                        padding: EdgeInsets.fromLTRB(
+                          listInset,
                           8,
-                          16,
+                          listInset,
                           16,
                         ),
                         itemCount: service.messages.length,
                         itemBuilder: (context, index) {
                           final message = service.messages[index];
-                          final isMe =
-                              message.username == service.username;
+                          final isMe = message.username == service.username;
                           return MessageBubble(
                             message: message,
                             isMe: isMe,
@@ -245,109 +187,100 @@ class _ChatScreenState extends State<ChatScreen>
               ],
             ),
           ),
-          // Glass Header (positioned on top, blurs messages behind it)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _headerAnim,
-              child: GlassContainer(
-                padding: EdgeInsets.only(
-                  top: topPadding + 12,
-                  bottom: 12,
-                  left: 12,
-                  right: 16,
-                ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: colorScheme.outline.withOpacity(0.3),
-                    width: 0.5,
+          // Header (positioned on top of the message list)
+          if (widget.showHeader)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: FadeTransition(
+                opacity: _headerAnim,
+                child: GlassContainer(
+                  padding: EdgeInsets.only(
+                    top: topPadding + 12,
+                    bottom: 12,
+                    left: 12,
+                    right: 16,
                   ),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: colorScheme.onSurface,
-                        size: 20,
-                      ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: colorScheme.outline.withOpacity(0.3),
+                      width: 0.5,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.otherUsername,
-                            style: textTheme.titleLarge,
+                  ),
+                  child: Row(
+                    children: [
+                      if (!widget.embedded) ...[
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: colorScheme.onSurface,
+                            size: 20,
                           ),
-                          const SizedBox(height: 2),
-                          Consumer<FirebaseChatService>(
-                            builder: (context, service, _) => Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: service.isConnected
-                                        ? colorScheme.onlineGreen
-                                        : colorScheme.error,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  service.isConnected
-                                      ? 'Online'
-                                      : 'Offline',
-                                  style: textTheme.bodySmall,
-                                ),
-                              ],
+                        ),
+                        const SizedBox(width: 8),
+                      ] else
+                        const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.otherUsername,
+                              style: textTheme.titleLarge,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                    
-                    Builder(
-                      builder: (context) => IconButton(
-                        onPressed: () => _showCallConfirmation(context),
-                        icon: Icon(
-                          Icons.call_rounded,
-                          color: colorScheme.onSurfaceVariant,
-                          size: 22,
-                        ),
-                        tooltip: 'Voice Call',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                      Hero(
-                      tag: 'avatar_${widget.otherUsername}',
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: avatarColor,
-                        child: Text(
-                          widget.otherUsername[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                            const SizedBox(height: 2),
+                            Consumer<FirebaseChatService>(
+                              builder: (context, service, _) => Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: service.isConnected
+                                          ? colorScheme.onlineGreen
+                                          : colorScheme.error,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    service.isConnected ? 'Online' : 'Offline',
+                                    style: textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+
+                      Builder(
+                        builder: (context) => IconButton(
+                          onPressed: () => _showCallConfirmation(context),
+                          icon: Icon(
+                            Icons.call_rounded,
+                            color: colorScheme.onSurfaceVariant,
+                            size: 22,
+                          ),
+                          tooltip: 'Voice Call',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      widget.embedded
+                          ? headerAvatar
+                          : Hero(
+                              tag: 'avatar_${widget.otherUsername}',
+                              child: headerAvatar,
+                            ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 }
-

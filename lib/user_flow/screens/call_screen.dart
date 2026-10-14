@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chatapp/services/agora_call_service.dart';
 import 'package:chatapp/utils/avatar_utils.dart';
+import 'package:chatapp/widgets/depth.dart';
 
 class CallScreen extends StatefulWidget {
   final String otherUsername;
@@ -97,20 +98,14 @@ class _CallScreenState extends State<CallScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Avatar
-                  Container(
+                  DepthSurface(
+                    shape: BoxShape.circle,
                     width: 150,
                     height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: avatarColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: avatarColor.withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 10,
-                        ),
-                      ],
-                    ),
+                    level: 3,
+                    color: avatarColor,
+                    shadowTint: avatarColor,
+                    rimTint: avatarColor,
                     child: Center(
                       child: Text(
                         widget.otherUsername[0].toUpperCase(),
@@ -151,27 +146,17 @@ class _CallScreenState extends State<CallScreen> {
             // End call button
             Padding(
               padding: const EdgeInsets.all(32),
-              child: Container(
+              child: DepthButton(
+                shape: BoxShape.circle,
                 width: 72,
                 height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colorScheme.error,
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.error.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  onPressed: _endCall,
-                  icon: Icon(
-                    Icons.call_end_rounded,
-                    color: colorScheme.onError,
-                    size: 32,
-                  ),
+                padding: EdgeInsets.zero,
+                colors: [colorScheme.error, AppDepth.darken(colorScheme.error, 0.25)],
+                onPressed: _endCall,
+                child: Icon(
+                  Icons.call_end_rounded,
+                  color: colorScheme.onError,
+                  size: 32,
                 ),
               ),
             ),
